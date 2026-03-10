@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { authApi } from "@/lib/api/auth";
 import { useAuthStore } from "@/stores/auth";
-import { Shield, LogIn, Loader2, Eye, EyeOff } from "lucide-react";
+import { Shield, LogIn, Loader2, Eye, EyeOff, Sparkles } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -24,146 +24,137 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const response = await authApi.login({ email, password });
-      // Token 已通过 HttpOnly Cookie 存储，不需要手动存入 localStorage
-      // 直接获取用户信息
+      await authApi.login({ email, password });
       const userInfo = await authApi.getCurrentUser();
-      setAuth(userInfo, response.access_token);
+      setAuth(userInfo);
       router.push("/");
-    } catch (err: any) {
-      setError(err.response?.data?.message || "登录失败，请检查邮箱和密码");
+    } catch (err: unknown) {
+      const axiosErr = err as import("axios").AxiosError<{ message?: string }>;
+      setError(axiosErr.response?.data?.message || "登录失败，请检查邮箱和密码");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex">
-      {/* 左侧装饰区域 */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-orange-500 via-red-500 to-amber-500 relative overflow-hidden">
-        {/* 装饰元素 */}
-        <div className="absolute inset-0">
-          <div className="absolute top-20 left-20 w-72 h-72 bg-white/10 rounded-full blur-3xl"></div>
-          <div className="absolute bottom-20 right-20 w-96 h-96 bg-white/10 rounded-full blur-3xl"></div>
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-white/5 rounded-full blur-2xl"></div>
+    <div className="relative min-h-screen overflow-hidden bg-[#FAF8F5] lg:flex">
+      <div className="pointer-events-none absolute -left-16 top-8 h-72 w-72 rounded-full bg-orange-300/30 blur-3xl" />
+      <div className="pointer-events-none absolute right-8 top-16 h-80 w-80 rounded-full bg-blue-300/20 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-20 left-1/3 h-72 w-72 rounded-full bg-emerald-300/20 blur-3xl" />
+
+      <section className="relative hidden min-h-screen overflow-hidden border-r border-white/60 lg:flex lg:w-[48%] lg:flex-col lg:justify-between lg:bg-gradient-to-br lg:from-slate-900 lg:via-slate-800 lg:to-slate-900 lg:p-12">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_18%,rgba(249,115,22,0.36),transparent_38%),radial-gradient(circle_at_82%_26%,rgba(59,130,246,0.3),transparent_36%),radial-gradient(circle_at_70%_80%,rgba(16,185,129,0.2),transparent_30%)]" />
+
+        <div className="relative z-10 flex items-center gap-3">
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 text-white shadow-lg shadow-primary-500/30">
+            <Shield className="h-6 w-6" />
+          </div>
+          <div>
+            <p className="text-base font-semibold text-white">Eucal AI</p>
+            <p className="text-sm text-white/70">Admin Console</p>
+          </div>
         </div>
 
-        {/* 背景图案 */}
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4yIj48cGF0aCBkPSJNMzYgMzRoLTJ2LTRoMnYyaDR2MmgtdnptLTQgOGgydjJoLTJ2LTJ6bTQtOGgydjJoLTJ2LTJ6bTQtOGgydjJoLTJ2LTJ6Ii8+PC9nPjwvZz48L3N2Zz4=')] opacity-30"></div>
-
-        {/* 内容 */}
-        <div className="relative z-10 flex flex-col justify-center items-center w-full px-16">
-          <div className="w-24 h-24 bg-white/20 backdrop-blur-sm rounded-3xl flex items-center justify-center mb-8 shadow-2xl">
-            <Shield className="w-12 h-12 text-white" />
-          </div>
-          <h1 className="text-5xl font-bold text-white mb-4">Eucal AI</h1>
-          <p className="text-xl text-white/80 text-center max-w-md">
-            管理后台
+        <div className="relative z-10 max-w-md space-y-6">
+          <span className="inline-flex items-center gap-1 rounded-full border border-white/30 bg-white/10 px-3 py-1 text-xs font-medium text-white/95 backdrop-blur">
+            <Sparkles className="h-3.5 w-3.5" />
+            Intelligent Control Center
+          </span>
+          <h1 className="text-4xl font-semibold leading-tight text-white xl:text-5xl">
+            管理效率与品牌体验
+            <span className="mt-2 block bg-gradient-to-r from-orange-200 via-orange-100 to-sky-200 bg-clip-text text-transparent">
+              在同一界面统一达成
+            </span>
+          </h1>
+          <p className="text-base leading-relaxed text-white/75">
+            统一管理后台数据，提升操作效率。
           </p>
-          <div className="mt-12 flex items-center gap-8 text-white/60 text-sm">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-              <span>安全可靠</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
-              <span>高效管理</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-purple-400 rounded-full"></div>
-              <span>实时监控</span>
-            </div>
+        </div>
+
+        <div className="relative z-10 text-sm text-white/50">
+          &copy; {new Date().getFullYear()} Eucal AI
+        </div>
+      </section>
+
+      <section className="relative flex min-h-screen flex-1 flex-col px-8 py-12 sm:px-12 lg:px-16">
+        {/* 移动端顶部品牌 */}
+        <div className="flex items-center gap-3 lg:hidden">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 text-white">
+            <Shield className="h-5 w-5" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-foreground">Eucal AI</p>
+            <p className="text-xs text-muted-foreground">Admin Console</p>
           </div>
         </div>
-      </div>
 
-      {/* 右侧登录表单 */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center bg-gradient-to-br from-gray-50 via-orange-50/20 to-amber-50/10 p-8">
-        <div className="w-full max-w-md">
-          {/* 移动端 Logo */}
-          <div className="lg:hidden text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-orange-500 to-red-500 rounded-2xl shadow-lg shadow-orange-500/30 mb-4">
-              <Shield className="w-8 h-8 text-white" />
-            </div>
-            <h1 className="text-2xl font-bold text-gray-900">Eucal AI</h1>
-            <p className="text-gray-500">管理后台</p>
-          </div>
-
-          <div className="bg-white rounded-3xl shadow-xl border border-gray-100 p-8">
-            <div className="text-center mb-8">
-              <h2 className="text-2xl font-bold text-gray-900">欢迎回来</h2>
-              <p className="text-gray-500 mt-2">请输入您的账号信息登录</p>
+        {/* 居中表单区 */}
+        <div className="flex flex-1 items-center justify-center">
+          <div className="w-full max-w-sm">
+            <div className="mb-10">
+              <h2 className="text-4xl font-semibold tracking-tight text-foreground">欢迎回来</h2>
             </div>
 
-            <form onSubmit={handleSubmit}>
-              <div className="space-y-6">
-                {error && (
-                  <div className="bg-red-50 text-red-600 px-4 py-3 rounded-xl text-sm animate-fade-in">
-                    {error}
-                  </div>
-                )}
+            <form onSubmit={handleSubmit} className="space-y-5">
+              {error ? (
+                <div className="rounded-xl border border-red-200 bg-red-50/90 px-3 py-2 text-sm text-red-700">
+                  {error}
+                </div>
+              ) : null}
 
-                <div className="space-y-2">
-                  <Label htmlFor="email" className="text-gray-700 font-medium">邮箱地址</Label>
+              <div className="space-y-2">
+                <Label htmlFor="email">账号</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder=""
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="h-11"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="password">密码</Label>
+                <div className="relative">
                   <Input
-                    id="email"
-                    type="email"
-                    placeholder="admin@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="h-12 bg-gray-50 border-gray-200 rounded-xl focus:border-primary focus:ring-primary px-4"
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder=""
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="h-11 pr-11"
                     required
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
                 </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="password" className="text-gray-700 font-medium">密码</Label>
-                  <div className="relative">
-                    <Input
-                      id="password"
-                      type={showPassword ? "text" : "password"}
-                      placeholder="请输入密码"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="h-12 bg-gray-50 border-gray-200 rounded-xl focus:border-primary focus:ring-primary px-4 pr-12"
-                      required
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                    >
-                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                    </button>
-                  </div>
-                </div>
-
-                <Button
-                  type="submit"
-                  className="w-full h-12 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-medium rounded-xl shadow-lg shadow-orange-500/30 hover:shadow-orange-500/40 transition-all duration-300"
-                  disabled={loading}
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                      登录中...
-                    </>
-                  ) : (
-                    <>
-                      <LogIn className="w-5 h-5 mr-2" />
-                      登录
-                    </>
-                  )}
-                </Button>
               </div>
+
+              <Button type="submit" className="mt-2 h-11 w-full" disabled={loading}>
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    登录中...
+                  </>
+                ) : (
+                  <>
+                    <LogIn className="mr-2 h-4 w-4" />
+                    登录
+                  </>
+                )}
+              </Button>
             </form>
           </div>
-
-          <p className="text-center text-gray-400 text-sm mt-8">
-            © 2024 Eucal AI. All rights reserved.
-          </p>
         </div>
-      </div>
+      </section>
     </div>
   );
 }
+

@@ -1,9 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
+import { PageHeader } from "@/components/page-header";
+import { EmptyState } from "@/components/empty-state";
+import { Pagination } from "@/components/pagination";
+import { LoadingSpinner } from "@/components/loading-spinner";
 import {
   Dialog,
   DialogContent,
@@ -31,7 +35,6 @@ import {
   CheckCircle2,
   XCircle,
   Sparkles,
-  ChevronDown,
   CopyCheck,
   Edit3,
 } from "lucide-react";
@@ -68,7 +71,7 @@ export default function InvitationCodesPage() {
   const [savingEdit, setSavingEdit] = useState(false);
 
   // 获取邀请码列表
-  const fetchCodes = async () => {
+  const fetchCodes = useCallback(async () => {
     setLoading(true);
     try {
       const data: InvitationCodeListResponse = await invitationCodeApi.getList({
@@ -82,11 +85,11 @@ export default function InvitationCodesPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, pageSize]);
 
   useEffect(() => {
     fetchCodes();
-  }, [page]);
+  }, [fetchCodes]);
 
   // 检查邀请码是否有效
   const isCodeValid = (code: InvitationCode): boolean => {
@@ -185,7 +188,7 @@ export default function InvitationCodesPage() {
   // 状态配置
   type FilterValue = "valid" | "invalid" | null;
   const statusConfig: { value: FilterValue; label: string; icon: typeof Filter; color: string }[] = [
-    { value: null, label: "全部", icon: Filter, color: "text-gray-600" },
+    { value: null, label: "全部", icon: Filter, color: "text-muted-foreground" },
     { value: "valid", label: "有效", icon: CheckCircle2, color: "text-green-600" },
     { value: "invalid", label: "无效", icon: XCircle, color: "text-red-600" },
   ];
@@ -211,30 +214,20 @@ export default function InvitationCodesPage() {
     return "bg-red-50 text-red-700 border-red-200";
   };
 
-  const totalPages = Math.ceil(total / pageSize);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-orange-50/30 to-amber-50/20">
+    <div className="page-stack">
       {/* 顶部装饰 */}
-      <div className="relative h-48 bg-gradient-to-r from-orange-500 via-red-500 to-amber-500 overflow-hidden">
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4xIj48cGF0aCBkPSJNMzYgMzRoLTJ2LTRoMnYyaDR2MmgtdnptLTQgOGgydjJoLTJ2LTJ6bTQtOGgydjJoLTJ2LTJ6bTQtOGgydjJoLTJ2LTJ6Ii8+PC9nPjwvZz48L3N2Zz4=')] opacity-50"></div>
-        <div className="relative max-w-7xl mx-auto px-8 pt-12">
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center">
-              <Ticket className="w-8 h-8 text-white" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold text-white">邀请码管理</h1>
-              <p className="text-white/80 mt-1">管理用户注册邀请码 · 共 {total} 个邀请码</p>
-            </div>
-          </div>
-        </div>
-      </div>
+      <PageHeader
+        icon={Ticket}
+        title="邀请码管理"
+        subtitle={`管理用户注册邀请码 · 共 ${total} 个邀请码`}
+      />
 
-      <div className="relative max-w-7xl mx-auto px-8 -mt-8">
+      <div className="page-stack">
         {/* 操作栏 */}
-        <Card className="border-0 shadow-xl bg-white mb-6">
-          <CardContent className="p-4">
+        <Card className="panel">
+          <CardContent className="p-4 sm:p-4">
             <div className="flex items-center justify-between">
               {/* 状态筛选 */}
               <div className="flex items-center gap-2">
@@ -245,10 +238,10 @@ export default function InvitationCodesPage() {
                     <button
                       key={config.value ?? "all"}
                       onClick={() => setStatusFilter(config.value as FilterValue)}
-                      className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                      className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium leading-none transition-all duration-200 ${
                         isActive
-                          ? "bg-primary text-white shadow-md"
-                          : "text-gray-600 hover:bg-gray-100"
+                          ? "bg-primary/12 text-primary"
+                          : "text-muted-foreground hover:bg-secondary hover:text-foreground"
                       }`}
                     >
                       <Icon className={`w-4 h-4 ${isActive ? "" : config.color}`} />
@@ -259,169 +252,102 @@ export default function InvitationCodesPage() {
               </div>
 
               {/* 生成按钮 */}
-              <div className="relative">
-                <Button
-                  onClick={() => setShowGeneratePanel(!showGeneratePanel)}
-                  className="bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/30"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  生成邀请码
-                  <ChevronDown className={`w-4 h-4 ml-2 transition-transform ${showGeneratePanel ? "rotate-180" : ""}`} />
-                </Button>
-
-                {/* 生成面板 */}
-                {showGeneratePanel && (
-                  <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-xl shadow-2xl border border-gray-100 p-4 z-50 animate-fade-in">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="w-10 h-10 bg-orange-50 rounded-lg flex items-center justify-center">
-                        <Sparkles className="w-5 h-5 text-orange-500" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-gray-900">生成新邀请码</p>
-                        <p className="text-xs text-gray-500">设置生成数量和过期时间</p>
-                      </div>
-                    </div>
-
-                    <div className="space-y-4">
-                      <div>
-                        <label className="text-sm font-medium text-gray-700 mb-2 block">生成数量</label>
-                        <Input
-                          type="number"
-                          min={1}
-                          max={100}
-                          value={generateCount}
-                          onChange={(e) => setGenerateCount(parseInt(e.target.value) || 1)}
-                          className="h-10"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="text-sm font-medium text-gray-700 mb-2 block">过期时间</label>
-                        <Input
-                          type="datetime-local"
-                          value={expiresAt}
-                          onChange={(e) => setExpiresAt(e.target.value)}
-                          className="h-10"
-                        />
-                        <p className="text-xs text-gray-500 mt-1">不选择则默认 7 天后过期</p>
-                      </div>
-
-                      <div className="flex gap-2">
-                        <Button
-                          onClick={handleGenerate}
-                          disabled={generating}
-                          className="flex-1 bg-primary hover:bg-primary/90 text-white"
-                        >
-                          {generating ? (
-                            <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                          ) : (
-                            <Sparkles className="w-4 h-4 mr-2" />
-                          )}
-                          确认生成
-                        </Button>
-                        <Button
-                          variant="outline"
-                          onClick={() => setShowGeneratePanel(false)}
-                        >
-                          取消
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
+              <Button
+                onClick={() => setShowGeneratePanel(true)}
+                className="bg-primary hover:bg-primary/90 text-white"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                生成邀请码
+              </Button>
             </div>
           </CardContent>
         </Card>
 
         {/* 邀请码列表 */}
-        <Card className="border-0 shadow-xl bg-white">
+        <Card className="table-shell">
           <div className="overflow-hidden">
             {loading ? (
-              <div className="text-center py-16">
-                <RefreshCw className="w-8 h-8 text-primary animate-spin mx-auto" />
-                <p className="text-gray-500 mt-4">加载中...</p>
-              </div>
+              <LoadingSpinner />
             ) : filteredCodes.length === 0 ? (
-              <div className="text-center py-16">
-                <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Ticket className="w-10 h-10 text-gray-300" />
-                </div>
-                <p className="text-lg text-gray-600 mb-2">暂无邀请码</p>
-                <p className="text-sm text-gray-400 mb-6">点击"生成邀请码"创建新的邀请码</p>
-                <Button
-                  onClick={() => setShowGeneratePanel(true)}
-                  className="bg-primary hover:bg-primary/90 text-white"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  生成邀请码
-                </Button>
-              </div>
+              <EmptyState
+                icon={Ticket}
+                title="暂无邀请码"
+                description="点击&quot;生成邀请码&quot;创建新的邀请码"
+                action={
+                  <Button
+                    onClick={() => setShowGeneratePanel(true)}
+                    className="bg-primary hover:bg-primary/90 text-white"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    生成邀请码
+                  </Button>
+                }
+              />
             ) : (
               <table className="w-full">
                 <thead>
-                  <tr className="bg-gradient-to-r from-gray-50 to-orange-50/30 border-b border-gray-100">
-                    <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm">邀请码</th>
-                    <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm">状态</th>
-                    <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm">创建时间</th>
-                    <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm">过期时间</th>
-                    <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm">备注</th>
-                    <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm">操作</th>
+                  <tr className="table-head border-b border-border">
+                    <th className="px-6 py-4 text-left text-sm font-semibold">邀请码</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold">状态</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold">创建时间</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold">过期时间</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold">备注</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold">操作</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredCodes.map((code, index) => (
                     <tr
                       key={code.id}
-                      className={`border-b border-gray-50 transition-colors animate-fade-in ${
-                        !isCodeValid(code) ? "bg-red-50/30" : "hover:bg-orange-50/20"
+                      className={`table-row animate-fade-in ${
+                        !isCodeValid(code) ? "bg-red-50/30 hover:bg-red-50/45" : ""
                       }`}
                       style={{ animationDelay: `${index * 50}ms` }}
                     >
                       <td className="py-4 px-6">
                         <div className="flex items-center gap-3">
-                          <code className="font-mono text-sm text-gray-900 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100">
+                          <code className="rounded-lg border border-border bg-secondary px-3 py-1.5 font-mono text-sm text-foreground">
                             {code.code}
                           </code>
                           <button
                             onClick={() => handleCopy(code.code)}
-                            className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+                            className="inline-flex items-center justify-center rounded-lg p-1.5 transition-colors hover:bg-secondary"
                             title="复制"
                           >
                             {copiedCode === code.code ? (
                               <CopyCheck className="w-4 h-4 text-green-500" />
                             ) : (
-                              <Copy className="w-4 h-4 text-gray-400" />
+                              <Copy className="w-4 h-4 text-muted-foreground" />
                             )}
                           </button>
                         </div>
                       </td>
                       <td className="py-4 px-6">
                         <span
-                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border ${getStatusClass(code)}`}
+                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium leading-none border ${getStatusClass(code)}`}
                         >
                           {getStatusIcon(code)}
                           {getStatusText(code)}
                         </span>
                       </td>
                       <td className="py-4 px-6">
-                        <div className="flex items-center gap-2 text-sm text-gray-600">
-                          <Clock className="w-4 h-4 text-gray-400" />
+                        <div className="flex items-center gap-2 text-sm leading-none text-muted-foreground">
+                          <Clock className="w-4 h-4" />
                           {new Date(code.created_at).toLocaleString("zh-CN")}
                         </div>
                       </td>
-                      <td className="py-4 px-6 text-sm text-gray-600">
+                      <td className="py-4 px-6 text-sm text-muted-foreground">
                         {code.expires_at ? (
-                          <div className="flex items-center gap-2">
-                            <Clock className="w-4 h-4 text-gray-400" />
+                          <div className="flex items-center gap-2 leading-none">
+                            <Clock className="w-4 h-4" />
                             {new Date(code.expires_at).toLocaleString("zh-CN")}
                           </div>
                         ) : (
                           <span className="text-green-600 font-medium">永不过期</span>
                         )}
                       </td>
-                      <td className="py-4 px-6 text-sm text-gray-600 max-w-[200px] truncate">
-                        {code.remark || <span className="text-gray-300">-</span>}
+                      <td className="max-w-[200px] truncate px-6 py-4 text-sm text-muted-foreground">
+                        {code.remark || <span className="text-muted-foreground/50">-</span>}
                       </td>
                       <td className="py-4 px-6">
                         <div className="flex items-center gap-2">
@@ -431,7 +357,7 @@ export default function InvitationCodesPage() {
                               variant="outline"
                               size="sm"
                               onClick={() => handleEdit(code)}
-                              className="border-gray-200 text-gray-600 hover:bg-gray-50"
+                              className="text-muted-foreground hover:bg-secondary hover:text-foreground"
                             >
                               <Edit3 className="w-3 h-3 mr-1" />
                               编辑
@@ -443,7 +369,7 @@ export default function InvitationCodesPage() {
                               variant="outline"
                               size="sm"
                               onClick={() => handleToggleStatus(code)}
-                              className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 hover:border-red-300"
+                              className="border-red-200 text-red-600 hover:border-red-300 hover:bg-red-50 hover:text-red-700"
                             >
                               <PowerOff className="w-3 h-3 mr-1" />
                               弃用
@@ -454,14 +380,14 @@ export default function InvitationCodesPage() {
                               variant="outline"
                               size="sm"
                               onClick={() => handleToggleStatus(code)}
-                              className="border-green-200 text-green-600 hover:bg-green-50 hover:text-green-700 hover:border-green-300"
+                              className="border-green-200 text-green-600 hover:border-green-300 hover:bg-green-50 hover:text-green-700"
                             >
                               <Power className="w-3 h-3 mr-1" />
                               启用
                             </Button>
                           )}
                           {code.status === 1 && (
-                            <span className="text-gray-400 text-sm px-3">已使用</span>
+                            <span className="px-3 text-sm text-muted-foreground">已使用</span>
                           )}
                         </div>
                       </td>
@@ -472,36 +398,70 @@ export default function InvitationCodesPage() {
             )}
 
             {/* 分页 */}
-            {!loading && filteredCodes.length > 0 && totalPages > 1 && (
-              <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100 bg-gray-50/50">
-                <div className="text-sm text-gray-500">
-                  显示第 {(page - 1) * pageSize + 1} - {Math.min(page * pageSize, total)} 条，共 {total} 条
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setPage((p) => Math.max(1, p - 1))}
-                    disabled={page === 1}
-                    className="hover:bg-gray-100"
-                  >
-                    上一页
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                    disabled={page === totalPages}
-                    className="hover:bg-gray-100"
-                  >
-                    下一页
-                  </Button>
-                </div>
-              </div>
+            {!loading && filteredCodes.length > 0 && (
+              <Pagination
+                page={page}
+                pageSize={pageSize}
+                total={total}
+                onPageChange={setPage}
+              />
             )}
           </div>
         </Card>
       </div>
+
+      {/* 生成邀请码弹窗 */}
+      <Dialog open={showGeneratePanel} onOpenChange={setShowGeneratePanel}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-primary" />
+              生成新邀请码
+            </DialogTitle>
+            <DialogDescription>设置生成数量和过期时间</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <label className="mb-2 block text-sm font-medium text-foreground">生成数量</label>
+              <Input
+                type="number"
+                min={1}
+                max={100}
+                value={generateCount}
+                onChange={(e) => setGenerateCount(parseInt(e.target.value) || 1)}
+                className="h-10"
+              />
+            </div>
+            <div>
+              <label className="mb-2 block text-sm font-medium text-foreground">过期时间</label>
+              <Input
+                type="datetime-local"
+                value={expiresAt}
+                onChange={(e) => setExpiresAt(e.target.value)}
+                className="h-10"
+              />
+              <p className="mt-1 text-xs text-muted-foreground">不选择则默认 7 天后过期</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowGeneratePanel(false)}>
+              取消
+            </Button>
+            <Button
+              onClick={handleGenerate}
+              disabled={generating}
+              className="bg-primary hover:bg-primary/90 text-white"
+            >
+              {generating ? (
+                <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Sparkles className="w-4 h-4 mr-2" />
+              )}
+              确认生成
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* 编辑弹窗 */}
       <Dialog open={!!editingCode} onOpenChange={(open) => !open && setEditingCode(null)}>
@@ -512,17 +472,17 @@ export default function InvitationCodesPage() {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">过期时间</label>
+              <label className="mb-2 block text-sm font-medium text-foreground">过期时间</label>
               <Input
                 type="datetime-local"
                 value={editExpiresAt}
                 onChange={(e) => setEditExpiresAt(e.target.value)}
                 className="h-10"
               />
-              <p className="text-xs text-gray-500 mt-1">留空则保持原有过期时间</p>
+              <p className="mt-1 text-xs text-muted-foreground">留空则保持原有过期时间</p>
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">备注</label>
+              <label className="mb-2 block text-sm font-medium text-foreground">备注</label>
               <Input
                 type="text"
                 value={editRemark}

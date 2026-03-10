@@ -1,4 +1,5 @@
 import axios, { AxiosError } from "axios";
+import { useAuthStore } from "@/stores/auth";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_ADMIN_API_URL || "http://localhost:8001";
 
@@ -21,11 +22,10 @@ export const apiClient = axios.create({
 // 响应拦截器 - 处理错误
 apiClient.interceptors.response.use(
   (response) => response,
-  (error: AxiosError<ApiResponse<any>>) => {
+  (error: AxiosError<ApiResponse<unknown>>) => {
     if (error.response?.status === 401) {
-      // 清除 localStorage（兼容旧数据）
-      localStorage.removeItem("admin_access_token");
-      localStorage.removeItem("admin_user");
+      // 清除 Zustand 认证状态
+      useAuthStore.getState().clearAuth();
       // 跳转到登录页
       if (typeof window !== "undefined") {
         window.location.href = "/login";

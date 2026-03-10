@@ -1,18 +1,14 @@
 import { apiClient, type ApiResponse } from "./client";
 
-// 语言类型
-export type Language = "zh" | "en";
-
 // 新闻类型
 export interface News {
   uid: string;
-  language: Language;
   title: string;
   slug: string;
   summary: string | null;
   cover_image: string | null;
   content: string;
-  status: 0 | 1 | 2;  // 0=草稿 1=已发布 2=已下线
+  status: 0 | 1 | 2 | 3;  // 0=草稿 1=已发布 2=已下线 3=已删除
   published_at: string | null;
   created_at: string;
   updated_at: string;
@@ -21,12 +17,11 @@ export interface News {
 // 新闻列表项（不含content）
 export interface NewsListItem {
   uid: string;
-  language: Language;
   title: string;
   slug: string;
   summary: string | null;
   cover_image: string | null;
-  status: 0 | 1 | 2;
+  status: 0 | 1 | 2 | 3;
   published_at: string | null;
   created_at: string;
   updated_at: string;
@@ -37,7 +32,6 @@ export interface NewsParams {
   page?: number;
   page_size?: number;
   status?: number;
-  language?: Language;
 }
 
 // 新闻列表响应
@@ -52,7 +46,6 @@ export interface NewsListResponse {
 export interface CreateNewsRequest {
   title: string;
   slug: string;
-  language?: Language;
   summary?: string;
   cover_image?: string;
   content: string;
@@ -64,11 +57,10 @@ export interface CreateNewsRequest {
 export interface UpdateNewsRequest {
   title?: string;
   slug?: string;
-  language?: Language;
   summary?: string;
   cover_image?: string;
   content?: string;
-  status?: 0 | 1 | 2;
+  status?: 0 | 1 | 2 | 3;
   published_at?: string;
 }
 
@@ -101,5 +93,10 @@ export const newsApi = {
   // 下线新闻（软删除）
   offline: async (uid: string): Promise<void> => {
     await apiClient.delete(`/api/v1/news/${uid}`);
+  },
+
+  // 删除新闻（软删除，status=3，管理端不再显示）
+  destroy: async (uid: string): Promise<void> => {
+    await apiClient.delete(`/api/v1/news/${uid}/destroy`);
   },
 };

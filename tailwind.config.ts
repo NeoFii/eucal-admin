@@ -1,4 +1,4 @@
-import type { Config } from "tailwindcss";
+﻿import type { Config } from "tailwindcss";
 
 const config: Config = {
   content: [
@@ -15,6 +15,16 @@ const config: Config = {
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         primary: {
+          50: "#fff7ed",
+          100: "#ffedd5",
+          200: "#fed7aa",
+          300: "#fdba74",
+          400: "#fb923c",
+          500: "#f97316",
+          600: "#ea580c",
+          700: "#c2410c",
+          800: "#9a3412",
+          900: "#7c2d12",
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
         },
@@ -49,12 +59,16 @@ const config: Config = {
         sm: "calc(var(--radius) - 4px)",
       },
       fontFamily: {
-        sans: ['PingFang SC', 'Microsoft Yahei', '微软雅黑', 'system-ui', 'sans-serif'],
-        display: ['PingFang SC', 'Microsoft Yahei', '微软雅黑', 'system-ui', 'sans-serif'],
+        sans: ["MiSans", "PingFang SC", "PingFang HK", "Microsoft YaHei", "微软雅黑", "Arial", "sans-serif"],
+        display: ["MiSans", "PingFang SC", "PingFang HK", "Microsoft YaHei", "微软雅黑", "Arial", "sans-serif"],
+      },
+      boxShadow: {
+        soft: "0 12px 26px -18px rgba(194, 65, 12, 0.38)",
+        panel: "0 18px 34px -20px rgba(194, 65, 12, 0.42)",
       },
     },
   },
-  plugins: [],
+  plugins: [require("tailwindcss-animate")],
 };
 
 export default config;

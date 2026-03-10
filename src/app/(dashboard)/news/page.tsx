@@ -1,9 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { PageHeader } from "@/components/page-header";
+import { EmptyState } from "@/components/empty-state";
+import { Pagination } from "@/components/pagination";
+import { LoadingSpinner } from "@/components/loading-spinner";
 import {
   Dialog,
   DialogContent,
@@ -18,13 +23,12 @@ import {
   type NewsListResponse,
   type CreateNewsRequest,
   type News,
-  type Language,
 } from "@/lib/api/news";
+import { toast } from "@/hooks/use-toast";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import {
   Plus,
-  RefreshCw,
   FileText,
   Clock,
   CheckCircle2,
@@ -35,11 +39,13 @@ import {
   Eye,
   Save,
   ArrowLeft,
+  Globe,
+  Trash2,
 } from "lucide-react";
 
 // 新闻状态配置
 const STATUS_CONFIG = {
-  0: { label: "草稿", color: "bg-gray-100 text-gray-700 border-gray-200", icon: FileText },
+  0: { label: "草稿", color: "bg-secondary text-secondary-foreground border-border", icon: FileText },
   1: { label: "已发布", color: "bg-green-50 text-green-700 border-green-200", icon: CheckCircle2 },
   2: { label: "已下线", color: "bg-red-50 text-red-700 border-red-200", icon: XCircle },
 };
@@ -52,17 +58,10 @@ const generateSlug = (title: string) => {
     .replace(/^-+|-+$/g, "");
 };
 
-// 语言配置
-const LANGUAGE_CONFIG = {
-  zh: { label: "中文", flag: "🇨🇳" },
-  en: { label: "英文", flag: "🇺🇸" },
-};
-
 // 空状态表单
 const emptyForm: CreateNewsRequest = {
   title: "",
   slug: "",
-  language: "zh",
   summary: "",
   cover_image: "",
   content: "",
@@ -84,25 +83,23 @@ function NewsEditor({
 }) {
   const [form, setForm] = useState<CreateNewsRequest>(emptyForm);
   const [saving, setSaving] = useState(false);
-  const [showPreview, setShowPreview] = useState(false);
 
   // 初始化表单
   useEffect(() => {
     setForm({
       title: news?.title || "",
       slug: news?.slug || "",
-      language: news?.language || "zh",
       summary: news?.summary || "",
       cover_image: news?.cover_image || "",
       content: news?.content || "",
-      status: news?.status || 0,
+      status: (news?.status ?? 0) as 0 | 1 | 2,
       published_at: news?.published_at || "",
     });
   }, [news]);
 
   const handleSave = async () => {
     if (!form.title || !form.slug || !form.content) {
-      alert("请填写标题、Slug和正文内容");
+      toast.error("请填写必填字段", "标题、Slug和正文内容不能为空");
       return;
     }
     setSaving(true);
@@ -114,25 +111,21 @@ function NewsEditor({
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-orange-50/30 to-amber-50/20">
+    <div className="page-stack">
       {/* 顶部导航栏 */}
-      <div className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
-        <div className="max-w-4xl mx-auto px-6 h-16 flex items-center justify-between">
+      <div className="sticky top-0 z-30 border-b border-border bg-background/95 backdrop-blur-sm">
+        <div className="px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="sm" onClick={onCancel} className="text-gray-600">
+            <Button variant="ghost" size="sm" onClick={onCancel} className="text-muted-foreground">
               <ArrowLeft className="w-4 h-4 mr-2" />
               返回
             </Button>
-            <div className="h-6 w-px bg-gray-200"></div>
-            <h1 className="text-lg font-semibold text-gray-900">
+            <div className="h-6 w-px bg-border"></div>
+            <h1 className="text-lg font-semibold text-foreground">
               {isNew ? "新增新闻" : "编辑新闻"}
             </h1>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => setShowPreview(true)} className="mr-2">
-              <Eye className="w-4 h-4 mr-2" />
-              预览
-            </Button>
             <Button variant="outline" onClick={onCancel}>
               取消
             </Button>
@@ -148,170 +141,151 @@ function NewsEditor({
         </div>
       </div>
 
-      {/* 表单内容 */}
-      <div className="max-w-6xl mx-auto px-6 py-6 space-y-6">
-        {/* 基础信息 */}
-        <div className="bg-white p-6 space-y-4">
-          <h2 className="text-base font-semibold text-gray-800 pb-2 border-b">基础信息</h2>
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">语言 *</label>
-              <select
-                value={form.language || "zh"}
-                onChange={(e) => setForm({ ...form, language: e.target.value as Language })}
-                className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              >
-                <option value="zh">🇨🇳 中文</option>
-                <option value="en">🇺🇸 English</option>
-              </select>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">标题 *</label>
-              <Input
-                value={form.title}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    title: e.target.value,
-                    slug: form.slug || generateSlug(e.target.value),
-                  })
-                }
-                placeholder="请输入新闻标题"
-                className="h-10"
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">Slug *</label>
-              <Input
-                value={form.slug}
-                onChange={(e) => setForm({ ...form, slug: e.target.value })}
-                placeholder="URL路径"
-                className="h-10"
-              />
-            </div>
-          </div>
-          <div>
-            <label className="text-sm font-medium text-gray-700 mb-2 block">Slug 说明</label>
-            <p className="text-xs text-gray-500">用于URL路径，建议使用英文和连字符，如 2024-product-launch</p>
-          </div>
-          <div>
-            <label className="text-sm font-medium text-gray-700 mb-2 block">摘要</label>
-            <Textarea
-              value={form.summary}
-              onChange={(e) => setForm({ ...form, summary: e.target.value })}
-              placeholder="新闻摘要（可选）"
-              className="h-20"
-            />
-          </div>
-          <div>
-            <label className="text-sm font-medium text-gray-700 mb-2 block">封面图URL</label>
-            <Input
-              value={form.cover_image}
-              onChange={(e) => setForm({ ...form, cover_image: e.target.value })}
-              placeholder="https://example.com/image.jpg"
-              className="h-10"
-            />
-            {form.cover_image && (
-              <div className="mt-2 relative w-full h-40 rounded-lg overflow-hidden bg-gray-100">
-                <img src={form.cover_image} alt="封面预览" className="w-full h-full object-cover" />
+      {/* 左右分栏内容区 */}
+      <div className="flex gap-6 px-4 py-6 sm:px-6 items-start">
+        {/* 左侧编辑区 */}
+        <div className="flex-1 min-w-0 space-y-6">
+          {/* 基础信息 */}
+          <div className="panel space-y-4 p-6">
+            <h2 className="border-b border-border pb-2 text-base font-semibold text-foreground">基础信息</h2>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="mb-2 block text-sm font-medium text-foreground">标题 *</label>
+                <Input
+                  value={form.title}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      title: e.target.value,
+                      slug: form.slug || generateSlug(e.target.value),
+                    })
+                  }
+                  placeholder="请输入新闻标题"
+                  className="h-10"
+                />
               </div>
-            )}
-          </div>
-          <div>
-            <label className="text-sm font-medium text-gray-700 mb-2 block">状态</label>
-            <div className="flex gap-4">
-              {[
-                { value: 0, label: "草稿", desc: "保存为草稿，不对外展示" },
-                { value: 1, label: "已发布", desc: "立即对外展示" },
-                { value: 2, label: "已下线", desc: "不再对外展示" },
-              ].map((option) => (
-                <label
-                  key={option.value}
-                  className={`flex-1 flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${
-                    form.status === option.value
-                      ? "border-primary bg-primary/5"
-                      : "border-gray-200 hover:border-gray-300"
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="status"
-                    checked={form.status === option.value}
-                    onChange={() => setForm({ ...form, status: option.value as 0 | 1 | 2 })}
-                    className="w-4 h-4 text-primary"
-                  />
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">{option.label}</p>
-                    <p className="text-xs text-gray-500">{option.desc}</p>
-                  </div>
-                </label>
-              ))}
+              <div>
+                <label className="mb-2 block text-sm font-medium text-foreground">Slug *</label>
+                <Input
+                  value={form.slug}
+                  onChange={(e) => setForm({ ...form, slug: e.target.value })}
+                  placeholder="URL路径"
+                  className="h-10"
+                />
+              </div>
             </div>
-          </div>
-        </div>
-
-        {/* 正文内容 */}
-        <div className="bg-white p-6">
-          <div className="flex items-center justify-between pb-4 border-b mb-4">
             <div>
-              <h2 className="text-base font-semibold text-gray-800">正文内容</h2>
-              <p className="text-xs text-gray-500 mt-1">支持 Markdown 语法</p>
+              <label className="mb-2 block text-sm font-medium text-foreground">Slug 说明</label>
+              <p className="text-xs text-muted-foreground">用于URL路径，建议使用英文和连字符，如 2024-product-launch</p>
             </div>
-            <Button variant="outline" size="sm" onClick={() => setShowPreview(true)}>
-              <Eye className="w-4 h-4 mr-2" />
-              预览
-            </Button>
-          </div>
-          <Textarea
-            value={form.content}
-            onChange={(e) => setForm({ ...form, content: e.target.value })}
-            placeholder="使用 Markdown 格式编写正文内容..."
-            className="h-[400px] font-mono text-sm"
-          />
-        </div>
-      </div>
-
-      {/* 预览弹窗 */}
-      <Dialog open={showPreview} onOpenChange={setShowPreview}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
-          <DialogHeader>
-            <DialogTitle>预览</DialogTitle>
-            <DialogDescription>查看新闻发布后的实际效果</DialogDescription>
-          </DialogHeader>
-          <div className="flex-1 overflow-y-auto px-6 pb-6">
-            {/* 预览头部 */}
-            <div className="mb-6">
+            <div>
+              <label className="mb-2 block text-sm font-medium text-foreground">摘要</label>
+              <Textarea
+                value={form.summary}
+                onChange={(e) => setForm({ ...form, summary: e.target.value })}
+                placeholder="新闻摘要（可选）"
+                className="h-20"
+              />
+            </div>
+            <div>
+              <label className="mb-2 block text-sm font-medium text-foreground">封面图URL</label>
+              <Input
+                value={form.cover_image}
+                onChange={(e) => setForm({ ...form, cover_image: e.target.value })}
+                placeholder="https://example.com/image.jpg"
+                className="h-10"
+              />
               {form.cover_image && (
-                <div className="w-full h-48 rounded-lg overflow-hidden mb-4 bg-gray-100">
-                  <img src={form.cover_image} alt="封面" className="w-full h-full object-cover" />
+                <div className="relative mt-2 h-40 w-full overflow-hidden rounded-xl bg-secondary">
+                  <Image src={form.cover_image} alt="封面预览" fill className="object-cover" unoptimized />
                 </div>
               )}
-              <h1 className="text-2xl font-bold text-gray-900">{form.title || "标题"}</h1>
-              {form.summary && <p className="text-gray-600 mt-2">{form.summary}</p>}
-              <div className="flex items-center gap-4 mt-3 text-sm text-gray-500">
-                <span className={`px-2 py-0.5 rounded-full text-xs ${
+            </div>
+            <div>
+              <label className="mb-2 block text-sm font-medium text-foreground">状态</label>
+              <div className="flex gap-4">
+                {[
+                  { value: 0, label: "草稿", desc: "保存为草稿，不对外展示" },
+                  { value: 1, label: "已发布", desc: "立即对外展示" },
+                  { value: 2, label: "已下线", desc: "不再对外展示" },
+                ].map((option) => (
+                  <label
+                    key={option.value}
+                    className={`flex-1 flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                      form.status === option.value
+                        ? "border-primary bg-primary/5"
+                        : "border-border hover:border-primary/30"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="status"
+                      checked={form.status === option.value}
+                      onChange={() => setForm({ ...form, status: option.value as 0 | 1 | 2 })}
+                      className="w-4 h-4 text-primary"
+                    />
+                    <div>
+                      <p className="text-sm font-medium text-foreground">{option.label}</p>
+                      <p className="text-xs text-muted-foreground">{option.desc}</p>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* 正文内容 */}
+          <div className="panel p-6">
+            <div className="mb-4 border-b border-border pb-4">
+              <h2 className="text-base font-semibold text-foreground">正文内容</h2>
+              <p className="mt-1 text-xs text-muted-foreground">支持 Markdown 语法</p>
+            </div>
+            <Textarea
+              value={form.content}
+              onChange={(e) => setForm({ ...form, content: e.target.value })}
+              placeholder="使用 Markdown 格式编写正文内容..."
+              className="h-[400px] font-mono text-sm"
+            />
+          </div>
+        </div>
+
+        {/* 右侧实时预览区 */}
+        <div className="flex-1 min-w-0 sticky top-20">
+          <div className="panel overflow-y-auto max-h-[calc(100vh-5.5rem)] scrollbar-thin">
+            <div className="px-5 py-3 border-b border-border flex items-center gap-2">
+              <Eye className="w-4 h-4 text-muted-foreground" />
+              <span className="text-sm font-medium text-muted-foreground">实时预览</span>
+            </div>
+            <div className="p-5">
+              {form.cover_image && (
+                <div className="relative mb-4 h-44 w-full overflow-hidden rounded-xl bg-secondary">
+                  <Image src={form.cover_image} alt="封面" fill className="object-cover" unoptimized />
+                </div>
+              )}
+              <h1 className="text-xl font-bold text-foreground leading-snug">
+                {form.title || <span className="text-muted-foreground italic">标题</span>}
+              </h1>
+              {form.summary && (
+                <p className="mt-2 text-sm text-muted-foreground">{form.summary}</p>
+              )}
+              <div className="mt-3 mb-4">
+                <span className={`inline-block px-2 py-0.5 rounded-full text-xs border ${
                   STATUS_CONFIG[form.status as keyof typeof STATUS_CONFIG]?.color || ""
                 }`}>
                   {STATUS_CONFIG[form.status as keyof typeof STATUS_CONFIG]?.label || "草稿"}
                 </span>
               </div>
-            </div>
-            {/* 预览正文 */}
-            <div className="markdown-content">
-              {form.content ? (
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>{form.content}</ReactMarkdown>
-              ) : (
-                <p className="text-gray-400 italic">暂无内容</p>
-              )}
+              <div className="border-t border-border pt-4 markdown-content text-sm">
+                {form.content ? (
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{form.content}</ReactMarkdown>
+                ) : (
+                  <p className="italic text-muted-foreground">暂无内容...</p>
+                )}
+              </div>
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowPreview(false)}>
-              关闭
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        </div>
+      </div>
     </div>
   );
 }
@@ -323,11 +297,11 @@ function NewsList({
   page,
   pageSize,
   loading,
-  languageFilter,
-  onLanguageChange,
   onPageChange,
   onEdit,
   onOffline,
+  onPublish,
+  onDelete,
   onCreate,
 }: {
   newsList: NewsListItem[];
@@ -335,77 +309,32 @@ function NewsList({
   page: number;
   pageSize: number;
   loading: boolean;
-  languageFilter: Language | "all";
-  onLanguageChange: (lang: Language | "all") => void;
   onPageChange: (page: number) => void;
   onEdit: (news: NewsListItem) => void;
   onOffline: (news: NewsListItem) => void;
+  onPublish: (news: NewsListItem) => void;
+  onDelete: (news: NewsListItem) => void;
   onCreate: () => void;
 }) {
-  const totalPages = Math.ceil(total / pageSize);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-orange-50/30 to-amber-50/20">
+    <div className="page-stack">
       {/* 顶部装饰 */}
-      <div className="relative h-48 bg-gradient-to-r from-orange-500 via-red-500 to-amber-500 overflow-hidden">
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4xIj48cGF0aCBkPSJNMzYgMzRoLTJ2LTRoMnYyaDR2MmgtdnptLTQgOGgydjJoLTJ2LTJ6bTQtOGgydjJoLTJ2LTJ6bTQtOGgydjJoLTJ2LTJ6Ii8+PC9nPjwvZz48L3N2Zz4=')] opacity-50"></div>
-        <div className="relative max-w-7xl mx-auto px-8 pt-12">
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center">
-              <FileText className="w-8 h-8 text-white" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold text-white">新闻管理</h1>
-              <p className="text-white/80 mt-1">管理新闻内容 · 共 {total} 条新闻</p>
-            </div>
-          </div>
-        </div>
-      </div>
+      <PageHeader
+        icon={FileText}
+        title="新闻管理"
+        subtitle={`管理新闻内容 · 共 ${total} 条新闻`}
+      />
 
-      <div className="relative max-w-7xl mx-auto px-8 -mt-8">
+      <div className="page-stack">
         {/* 操作栏 */}
-        <div className="bg-white mb-6">
+        <div className="panel">
           <div className="p-4">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="text-sm text-gray-500">共 {total} 条新闻</div>
-                {/* 语言筛选 */}
-                <div className="flex items-center gap-1 border-l border-gray-200 pl-4">
-                  <button
-                    onClick={() => onLanguageChange("all")}
-                    className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
-                      languageFilter === "all"
-                        ? "bg-primary text-white"
-                        : "text-gray-600 hover:bg-gray-100"
-                    }`}
-                  >
-                    全部
-                  </button>
-                  <button
-                    onClick={() => onLanguageChange("zh")}
-                    className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
-                      languageFilter === "zh"
-                        ? "bg-primary text-white"
-                        : "text-gray-600 hover:bg-gray-100"
-                    }`}
-                  >
-                    🇨🇳 中文
-                  </button>
-                  <button
-                    onClick={() => onLanguageChange("en")}
-                    className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
-                      languageFilter === "en"
-                        ? "bg-primary text-white"
-                        : "text-gray-600 hover:bg-gray-100"
-                    }`}
-                  >
-                    🇺🇸 English
-                  </button>
-                </div>
-              </div>
+              <div className="text-sm text-muted-foreground">共 {total} 条新闻</div>
               <Button
                 onClick={onCreate}
-                className="bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/30"
+                className="bg-primary hover:bg-primary/90 text-white"
               >
                 <Plus className="w-4 h-4 mr-2" />
                 新增新闻
@@ -415,74 +344,66 @@ function NewsList({
         </div>
 
         {/* 新闻列表 */}
-        <div className="bg-white">
+        <div className="table-shell">
           <div className="overflow-hidden">
             {loading ? (
-              <div className="text-center py-16">
-                <RefreshCw className="w-8 h-8 text-primary animate-spin mx-auto" />
-                <p className="text-gray-500 mt-4">加载中...</p>
-              </div>
+              <LoadingSpinner />
             ) : newsList.length === 0 ? (
-              <div className="text-center py-16">
-                <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <FileText className="w-10 h-10 text-gray-300" />
-                </div>
-                <p className="text-lg text-gray-600 mb-2">暂无新闻</p>
-                <p className="text-sm text-gray-400 mb-6">点击"新增新闻"创建第一篇文章</p>
-                <Button onClick={onCreate} className="bg-primary hover:bg-primary/90 text-white">
-                  <Plus className="w-4 h-4 mr-2" />
-                  新增新闻
-                </Button>
-              </div>
+              <EmptyState
+                icon={FileText}
+                title="暂无新闻"
+                description="点击&quot;新增新闻&quot;创建第一篇文章"
+                action={
+                  <Button onClick={onCreate} className="bg-primary hover:bg-primary/90 text-white">
+                    <Plus className="w-4 h-4 mr-2" />
+                    新增新闻
+                  </Button>
+                }
+              />
             ) : (
               <table className="w-full">
                 <thead>
-                  <tr className="bg-gradient-to-r from-gray-50 to-orange-50/30 border-b border-gray-100">
-                    <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm">语言</th>
-                    <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm">标题</th>
-                    <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm">Slug</th>
-                    <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm">状态</th>
-                    <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm">发布时间</th>
-                    <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm">创建时间</th>
-                    <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm">操作</th>
+                  <tr className="table-head border-b border-border">
+                    <th className="px-6 py-4 text-left text-sm font-semibold">标题</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold">Slug</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold">状态</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold">发布时间</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold">创建时间</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold">操作</th>
                   </tr>
                 </thead>
                 <tbody>
                   {newsList.map((news) => {
                     const status = STATUS_CONFIG[news.status as keyof typeof STATUS_CONFIG];
                     const StatusIcon = status?.icon || FileText;
-                    const lang = LANGUAGE_CONFIG[news.language as keyof typeof LANGUAGE_CONFIG];
                     return (
-                      <tr key={news.uid} className="border-b border-gray-50 transition-colors hover:bg-orange-50/20">
+                      <tr key={news.uid} className="table-row">
                         <td className="py-4 px-6">
-                          <span className="text-lg">{lang?.flag}</span>
-                        </td>
-                        <td className="py-4 px-6">
-                          <div className="font-medium text-gray-900">{news.title}</div>
+                          <div className="font-medium text-foreground">{news.title}</div>
                           {news.summary && (
-                            <div className="text-sm text-gray-500 mt-1 max-w-[300px] truncate">{news.summary}</div>
+                            <div className="mt-1 max-w-[300px] truncate text-sm text-muted-foreground">{news.summary}</div>
                           )}
                         </td>
                         <td className="py-4 px-6">
-                          <code className="text-sm text-gray-600 bg-gray-50 px-2 py-1 rounded">{news.slug}</code>
+                          <code className="rounded bg-secondary px-2 py-1 text-sm text-muted-foreground">{news.slug}</code>
                         </td>
                         <td className="py-4 px-6">
                           <span
-                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border ${status?.color || "bg-gray-100 text-gray-700"}`}
+                            className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium leading-none ${status?.color || "bg-secondary text-secondary-foreground"}`}
                           >
                             <StatusIcon className="w-3 h-3" />
                             {status?.label || "未知"}
                           </span>
                         </td>
                         <td className="py-4 px-6">
-                          <div className="flex items-center gap-2 text-sm text-gray-600">
-                            <Clock className="w-4 h-4 text-gray-400" />
+                          <div className="flex items-center gap-2 text-sm leading-none text-muted-foreground">
+                            <Clock className="w-4 h-4" />
                             {news.published_at ? new Date(news.published_at).toLocaleString("zh-CN") : "-"}
                           </div>
                         </td>
                         <td className="py-4 px-6">
-                          <div className="flex items-center gap-2 text-sm text-gray-600">
-                            <Clock className="w-4 h-4 text-gray-400" />
+                          <div className="flex items-center gap-2 text-sm leading-none text-muted-foreground">
+                            <Clock className="w-4 h-4" />
                             {new Date(news.created_at).toLocaleString("zh-CN")}
                           </div>
                         </td>
@@ -492,11 +413,22 @@ function NewsList({
                               variant="outline"
                               size="sm"
                               onClick={() => onEdit(news)}
-                              className="border-gray-200 text-gray-600 hover:bg-gray-50"
+                              className="text-muted-foreground hover:bg-secondary hover:text-foreground"
                             >
                               <Edit3 className="w-3 h-3 mr-1" />
                               编辑
                             </Button>
+                            {(news.status === 0 || news.status === 2) && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => onPublish(news)}
+                                className="border-green-200 text-green-600 hover:bg-green-50 hover:text-green-700 hover:border-green-300"
+                              >
+                                <Globe className="w-3 h-3 mr-1" />
+                                {news.status === 0 ? "发布" : "上线"}
+                              </Button>
+                            )}
                             {news.status === 1 && (
                               <Button
                                 variant="outline"
@@ -508,6 +440,15 @@ function NewsList({
                                 下线
                               </Button>
                             )}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => onDelete(news)}
+                              className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 hover:border-red-300"
+                            >
+                              <Trash2 className="w-3 h-3 mr-1" />
+                              删除
+                            </Button>
                           </div>
                         </td>
                       </tr>
@@ -518,35 +459,14 @@ function NewsList({
             )}
 
             {/* 分页 */}
-            {!loading && newsList.length > 0 && totalPages > 1 && (
-              <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100 bg-gray-50/50">
-                <div className="text-sm text-gray-500">
-                  显示第 {(page - 1) * pageSize + 1} - {Math.min(page * pageSize, total)} 条，共 {total} 条
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onPageChange(Math.max(1, page - 1))}
-                    disabled={page === 1}
-                    className="hover:bg-gray-100"
-                  >
-                    上一页
-                  </Button>
-                  <span className="text-sm text-gray-600 px-2">
-                    第 {page} 页，共 {totalPages} 页
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onPageChange(Math.min(totalPages, page + 1))}
-                    disabled={page === totalPages}
-                    className="hover:bg-gray-100"
-                  >
-                    下一页
-                  </Button>
-                </div>
-              </div>
+            {!loading && newsList.length > 0 && (
+              <Pagination
+                page={page}
+                pageSize={pageSize}
+                total={total}
+                onPageChange={onPageChange}
+                showPageInfo
+              />
             )}
           </div>
         </div>
@@ -565,24 +485,18 @@ export default function NewsPage() {
   const [page, setPage] = useState(1);
   const [pageSize] = useState(10);
   const [loading, setLoading] = useState(true);
-  const [languageFilter, setLanguageFilter] = useState<Language | "all">("all");
-
   // 下线确认弹窗
   const [offlineConfirm, setOfflineConfirm] = useState<NewsListItem | null>(null);
   const [offlining, setOfflining] = useState(false);
+  // 删除确认弹窗
+  const [deleteConfirm, setDeleteConfirm] = useState<NewsListItem | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   // 获取新闻列表
-  const fetchNews = async () => {
+  const fetchNews = useCallback(async () => {
     setLoading(true);
     try {
-      const params: { page: number; page_size: number; language?: Language } = {
-        page,
-        page_size: pageSize,
-      };
-      if (languageFilter !== "all") {
-        params.language = languageFilter;
-      }
-      const data: NewsListResponse = await newsApi.getList(params);
+      const data: NewsListResponse = await newsApi.getList({ page, page_size: pageSize });
       setNewsList(data.items);
       setTotal(data.total);
     } catch (error) {
@@ -590,11 +504,11 @@ export default function NewsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, pageSize]);
 
   useEffect(() => {
     if (view === "list") fetchNews();
-  }, [page, view, languageFilter]);
+  }, [fetchNews, view]);
 
   // 清理表单数据：将空字符串转换为 undefined
   const cleanFormData = (data: CreateNewsRequest): CreateNewsRequest => {
@@ -637,9 +551,38 @@ export default function NewsPage() {
       setOfflineConfirm(null);
     } catch (error) {
       console.error("下线新闻失败:", error);
-      alert("操作失败，请重试");
+      toast.error("操作失败", "请重试");
     } finally {
       setOfflining(false);
+    }
+  };
+
+  // 发布/上线新闻
+  const handlePublish = async (news: NewsListItem) => {
+    try {
+      await newsApi.update(news.uid, { status: 1 });
+      await fetchNews();
+      toast.success("操作成功", `《${news.title}》已${news.status === 0 ? "发布" : "上线"}`);
+    } catch (error) {
+      console.error("发布新闻失败:", error);
+      toast.error("操作失败", "请重试");
+    }
+  };
+
+  // 删除新闻
+  const handleDelete = async () => {
+    if (!deleteConfirm) return;
+    setDeleting(true);
+    try {
+      await newsApi.destroy(deleteConfirm.uid);
+      await fetchNews();
+      setDeleteConfirm(null);
+      toast.success("删除成功", `《${deleteConfirm.title}》已删除`);
+    } catch (error) {
+      console.error("删除新闻失败:", error);
+      toast.error("操作失败", "请重试");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -670,11 +613,11 @@ export default function NewsPage() {
         page={page}
         pageSize={pageSize}
         loading={loading}
-        languageFilter={languageFilter}
-        onLanguageChange={setLanguageFilter}
         onPageChange={setPage}
         onEdit={handleEdit}
         onOffline={setOfflineConfirm}
+        onPublish={handlePublish}
+        onDelete={setDeleteConfirm}
         onCreate={() => setView("create")}
       />
 
@@ -686,11 +629,11 @@ export default function NewsPage() {
             <DialogDescription>确定要下线这篇新闻吗？</DialogDescription>
           </DialogHeader>
           <div className="py-4">
-            <div className="flex items-start gap-3 p-4 bg-red-50 rounded-lg">
+            <div className="flex items-start gap-3 rounded-xl bg-red-50 p-4">
               <AlertCircle className="w-5 h-5 text-red-500 mt-0.5" />
               <div>
-                <p className="font-medium text-gray-900">{offlineConfirm?.title}</p>
-                <p className="text-sm text-gray-600 mt-1">下线后，用户将无法在官网查看此新闻</p>
+                <p className="font-medium text-foreground">{offlineConfirm?.title}</p>
+                <p className="mt-1 text-sm text-muted-foreground">下线后，用户将无法在官网查看此新闻</p>
               </div>
             </div>
           </div>
@@ -698,8 +641,34 @@ export default function NewsPage() {
             <Button variant="outline" onClick={() => setOfflineConfirm(null)}>
               取消
             </Button>
-            <Button onClick={handleOffline} disabled={offlining} className="bg-red-500 hover:bg-red-600 text-white">
+            <Button onClick={handleOffline} disabled={offlining} className="bg-red-500 text-white hover:bg-red-600">
               {offlining ? "处理中..." : "确认下线"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 删除确认弹窗 */}
+      <Dialog open={!!deleteConfirm} onOpenChange={(open) => !open && setDeleteConfirm(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>删除新闻</DialogTitle>
+            <DialogDescription>此操作不可恢复，确定要删除这篇新闻吗？</DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <div className="flex items-start gap-3 rounded-xl bg-red-50 p-4">
+              <Trash2 className="w-5 h-5 text-red-500 mt-0.5" />
+              <div>
+                <p className="font-medium text-foreground">{deleteConfirm?.title}</p>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteConfirm(null)}>
+              取消
+            </Button>
+            <Button onClick={handleDelete} disabled={deleting} className="bg-red-500 hover:bg-red-600 text-white">
+              {deleting ? "删除中..." : "确认删除"}
             </Button>
           </DialogFooter>
         </DialogContent>

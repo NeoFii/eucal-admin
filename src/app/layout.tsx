@@ -1,12 +1,10 @@
-import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+﻿import type { Metadata } from "next";
+import { Toaster } from "@/components/toaster";
 import "./globals.css";
 
-const inter = Inter({ subsets: ["latin"] });
-
 export const metadata: Metadata = {
-  title: "Eucal AI 管理员后台",
-  description: "Eucal AI 管理员后台",
+  title: "Eucal AI 管理后台",
+  description: "Eucal AI 管理后台",
 };
 
 export default function RootLayout({
@@ -16,7 +14,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="zh-CN">
-      <body className={inter.className}>{children}</body>
+      <body className="min-h-screen bg-background font-sans text-foreground antialiased">
+        {children}
+        <Toaster />
+      </body>
     </html>
   );
 }
