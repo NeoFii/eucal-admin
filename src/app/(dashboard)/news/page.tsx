@@ -385,7 +385,7 @@ function NewsList({
                           )}
                         </td>
                         <td className="py-4 px-6">
-                          <code className="rounded bg-secondary px-2 py-1 text-sm text-muted-foreground">{news.slug}</code>
+                          <code className="inline-flex items-center rounded bg-secondary px-2 py-1 text-sm text-muted-foreground">{news.slug}</code>
                         </td>
                         <td className="py-4 px-6">
                           <span

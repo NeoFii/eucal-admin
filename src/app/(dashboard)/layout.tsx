@@ -1,18 +1,22 @@
 ﻿"use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { LoadingSpinner } from "@/components/loading-spinner";
 import {
+  ScrollText,
   LayoutDashboard,
   Ticket,
   LogOut,
   Shield,
+  Users,
   FileText,
   Database,
   Blocks,
-  Building2,
+  Activity,
 } from "lucide-react";
 import { useAuthStore } from "@/stores/auth";
 import { authApi } from "@/lib/api/auth";
@@ -39,14 +43,26 @@ const sidebarItems = [
     icon: Database,
   },
   {
-    title: "研发商管理",
-    href: "/vendors",
-    icon: Building2,
-  },
-  {
     title: "服务商管理",
     href: "/providers",
     icon: Blocks,
+  },
+  {
+    title: "评测",
+    href: "/benchmark",
+    icon: Activity,
+  },
+  {
+    title: "管理员管理",
+    href: "/admin-users",
+    icon: Users,
+    requiresSuperAdmin: true,
+  },
+  {
+    title: "管理员审计",
+    href: "/admin-audit-logs",
+    icon: ScrollText,
+    requiresSuperAdmin: true,
   },
 ];
 
@@ -57,7 +73,38 @@ export default function DashboardLayout({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, clearAuth } = useAuthStore();
+  const { user, setAuth, clearAuth } = useAuthStore();
+  const [authReady, setAuthReady] = useState(false);
+  const isSuperAdmin = user?.role === "super_admin";
+  const visibleSidebarItems = sidebarItems.filter((item) => !item.requiresSuperAdmin || isSuperAdmin);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const syncCurrentUser = async () => {
+      try {
+        const currentUser = await authApi.getCurrentUser();
+        if (cancelled) {
+          return;
+        }
+        setAuth(currentUser);
+        setAuthReady(true);
+      } catch {
+        if (cancelled) {
+          return;
+        }
+        clearAuth();
+        setAuthReady(true);
+        router.push("/login");
+      }
+    };
+
+    syncCurrentUser();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [clearAuth, router, setAuth]);
 
   const handleLogout = async () => {
     try {
@@ -84,6 +131,18 @@ export default function DashboardLayout({
     day: "numeric",
   })}`;
 
+  const roleLabel = isSuperAdmin ? "超级管理员" : "管理员";
+
+  if (!authReady) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background px-6">
+        <div className="w-full max-w-md rounded-3xl border border-white/80 bg-white/85 p-8 shadow-panel backdrop-blur-sm">
+          <LoadingSpinner text="正在同步管理员身份..." />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="relative min-h-screen overflow-hidden bg-background">
       <div className="pointer-events-none absolute -left-24 top-8 h-72 w-72 rounded-full bg-orange-300/25 blur-3xl" />
@@ -101,7 +160,7 @@ export default function DashboardLayout({
         </div>
 
         <nav className="flex-1 space-y-1 overflow-auto pr-1 scrollbar-thin">
-          {sidebarItems.map((item) => {
+          {visibleSidebarItems.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.href);
             return (
@@ -126,6 +185,9 @@ export default function DashboardLayout({
           <div className="mb-3 rounded-xl border border-border/70 bg-orange-50/55 p-3">
             <p className="truncate text-sm font-medium text-foreground">{user?.name ?? "管理员"}</p>
             <p className="truncate text-xs text-muted-foreground">{user?.email}</p>
+            <p className="mt-2 inline-flex rounded-full border border-primary/15 bg-primary/10 px-2 py-1 text-[11px] font-medium text-primary">
+              {roleLabel}
+            </p>
           </div>
           <Button variant="outline" onClick={handleLogout} className="w-full justify-start">
             <LogOut className="mr-2 h-4 w-4" />
@@ -155,7 +217,7 @@ export default function DashboardLayout({
 
           <div className="mt-2 rounded-2xl border border-white/75 bg-white/75 px-2 py-2 backdrop-blur-sm lg:hidden">
             <nav className="flex gap-1 overflow-x-auto px-1 scrollbar-thin">
-              {sidebarItems.map((item) => {
+              {visibleSidebarItems.map((item) => {
                 const Icon = item.icon;
                 const active = isActive(item.href);
                 return (
@@ -185,4 +247,3 @@ export default function DashboardLayout({
     </div>
   );
 }
-

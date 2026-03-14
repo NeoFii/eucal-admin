@@ -1,8 +1,25 @@
-import { apiClient, type ApiResponse } from "./client";
+import axios from "axios";
+import { attachAuthRefreshInterceptor } from "./auth-interceptor";
+import type { ApiResponse } from "./client";
+
+const CONTENT_API_BASE_URL =
+  process.env.NEXT_PUBLIC_CONTENT_API_URL || "http://localhost:8004";
+
+const contentApiClient = axios.create({
+  baseURL: CONTENT_API_BASE_URL,
+  timeout: 10000,
+  headers: {
+    "Content-Type": "application/json",
+  },
+  withCredentials: true,
+});
+
+attachAuthRefreshInterceptor(contentApiClient);
 
 // 新闻类型
 export interface News {
   uid: string;
+  language?: string | null;
   title: string;
   slug: string;
   summary: string | null;
@@ -17,6 +34,7 @@ export interface News {
 // 新闻列表项（不含content）
 export interface NewsListItem {
   uid: string;
+  language?: string | null;
   title: string;
   slug: string;
   summary: string | null;
@@ -68,35 +86,48 @@ export interface UpdateNewsRequest {
 export const newsApi = {
   // 获取新闻列表（管理端，含全部状态）
   getList: async (params?: NewsParams): Promise<NewsListResponse> => {
-    const response = await apiClient.get<ApiResponse<NewsListResponse>>("/api/v1/news", { params });
+    const response = await contentApiClient.get<ApiResponse<NewsListResponse>>(
+      "/api/v1/admin/news",
+      { params }
+    );
     return response.data.data;
   },
 
   // 获取新闻详情（按 uid）
   getDetail: async (uid: string): Promise<News> => {
-    const response = await apiClient.get<ApiResponse<News>>(`/api/v1/news/${uid}`);
+    const response = await contentApiClient.get<ApiResponse<News>>(
+      `/api/v1/admin/news/${uid}`
+    );
     return response.data.data;
   },
 
   // 创建新闻
   create: async (data: CreateNewsRequest): Promise<News> => {
-    const response = await apiClient.post<ApiResponse<News>>("/api/v1/news", data);
+    const response = await contentApiClient.post<ApiResponse<News>>(
+      "/api/v1/admin/news",
+      data
+    );
     return response.data.data;
   },
 
   // 更新新闻
   update: async (uid: string, data: UpdateNewsRequest): Promise<News> => {
-    const response = await apiClient.put<ApiResponse<News>>(`/api/v1/news/${uid}`, data);
+    const response = await contentApiClient.put<ApiResponse<News>>(
+      `/api/v1/admin/news/${uid}`,
+      data
+    );
     return response.data.data;
   },
 
   // 下线新闻（软删除）
   offline: async (uid: string): Promise<void> => {
-    await apiClient.delete(`/api/v1/news/${uid}`);
+    await contentApiClient.delete(`/api/v1/admin/news/${uid}`);
   },
 
   // 删除新闻（软删除，status=3，管理端不再显示）
   destroy: async (uid: string): Promise<void> => {
-    await apiClient.delete(`/api/v1/news/${uid}/destroy`);
+    await contentApiClient.delete(`/api/v1/admin/news/${uid}/destroy`, {
+      data: {},
+    });
   },
 };

@@ -17,22 +17,26 @@ import {
   type ModelDetail,
   type ModelOfferingResponse,
   type OfferingCreate,
-  type OfferingUpdate,
   type Provider,
 } from "@/lib/api/testing";
 import { toast } from "@/hooks/use-toast";
 import { ArrowLeft, Plus, RefreshCw, Edit3, Trash2 } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import { mapCapabilityTags } from "@/lib/model-capabilities";
 
 type OfferingFormData = {
   provider_id: number;
   price_input_per_m: number | undefined;
   price_output_per_m: number | undefined;
+  provider_model_id: string;
 };
 
 const emptyOfferingForm = (defaultProviderId = 0): OfferingFormData => ({
   provider_id: defaultProviderId,
   price_input_per_m: undefined,
   price_output_per_m: undefined,
+  provider_model_id: "",
 });
 
 export default function ModelDetailPage() {
@@ -49,6 +53,7 @@ export default function ModelDetailPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingOffering, setEditingOffering] = useState<ModelOfferingResponse | null>(null);
   const [form, setForm] = useState<OfferingFormData>(emptyOfferingForm());
+  const capabilityTags = mapCapabilityTags(model?.capability_tags);
 
   const loadModel = useCallback(async () => {
     try {
@@ -98,6 +103,7 @@ export default function ModelDetailPage() {
       provider_id: offering.provider.id,
       price_input_per_m: offering.price_input_per_m,
       price_output_per_m: offering.price_output_per_m,
+      provider_model_id: offering.provider_model_id || "",
     });
     setDialogOpen(true);
   };
@@ -106,19 +112,19 @@ export default function ModelDetailPage() {
     if (!form.provider_id) return;
     setSaving(true);
     try {
+      const createData: OfferingCreate = {
+        provider_id: form.provider_id,
+        price_input_per_m: form.price_input_per_m,
+        price_output_per_m: form.price_output_per_m,
+        provider_model_id: form.provider_model_id || undefined,
+      };
       if (editingOffering) {
-        const updateData: OfferingUpdate = {
-          price_input_per_m: form.price_input_per_m,
-          price_output_per_m: form.price_output_per_m,
-        };
-        const updated = await testingApi.updateOffering(editingOffering.id, updateData);
-        setOfferings((prev) => prev.map((o) => (o.id === editingOffering.id ? updated : o)));
+        await testingApi.deleteOffering(editingOffering.id);
+        const created = await testingApi.addOffering(slug, createData);
+        setOfferings((prev) =>
+          prev.map((offering) => (offering.id === editingOffering.id ? created : offering))
+        );
       } else {
-        const createData: OfferingCreate = {
-          provider_id: form.provider_id,
-          price_input_per_m: form.price_input_per_m,
-          price_output_per_m: form.price_output_per_m,
-        };
         const created = await testingApi.addOffering(slug, createData);
         setOfferings((prev) => [...prev, created]);
       }
@@ -134,7 +140,7 @@ export default function ModelDetailPage() {
   const handleDelete = async (offering: ModelOfferingResponse) => {
     try {
       await testingApi.deleteOffering(offering.id);
-      setOfferings((prev) => prev.map((o) => (o.id === offering.id ? { ...o, is_active: false } : o)));
+      setOfferings((prev) => prev.filter((o) => o.id !== offering.id));
     } catch (error) {
       console.error("废弃报价失败:", error);
       toast.error("操作失败", "请重试");
@@ -187,12 +193,13 @@ export default function ModelDetailPage() {
           <h1 className="text-2xl font-semibold text-foreground">
             {model.vendor.name}/{model.name}
           </h1>
-          {model.is_reasoning_model ? (
-            <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs text-blue-700">推理模型</span>
-          ) : null}
         </div>
 
-        {model.description ? <p className="text-sm leading-relaxed text-muted-foreground">{model.description}</p> : null}
+        {model.description ? (
+          <div className="markdown-content text-sm text-foreground">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>{model.description}</ReactMarkdown>
+          </div>
+        ) : null}
 
         <div className="mt-4 flex flex-wrap gap-4 text-sm text-muted-foreground">
           {model.context_window ? (
@@ -217,10 +224,10 @@ export default function ModelDetailPage() {
           ) : null}
         </div>
 
-        {model.capability_tags?.length ? (
+        {capabilityTags.length ? (
           <div className="mt-4 flex flex-wrap gap-2">
-            {model.capability_tags.map((tag) => (
-              <span key={tag} className="rounded bg-primary/10 px-2 py-0.5 text-xs text-primary">
+            {capabilityTags.map((tag) => (
+              <span key={tag} className="inline-flex items-center rounded bg-primary/10 px-2 py-0.5 text-xs text-primary">
                 {tag}
               </span>
             ))}
@@ -272,7 +279,14 @@ export default function ModelDetailPage() {
                             {offering.provider.name.charAt(0).toUpperCase()}
                           </div>
                         )}
-                        <span className="font-medium text-foreground">{offering.provider.name}</span>
+                        <div>
+                          <span className="font-medium text-foreground">{offering.provider.name}</span>
+                          {offering.provider_model_id ? (
+                            <code className="mt-0.5 block text-xs text-muted-foreground">
+                              {offering.provider_model_id}
+                            </code>
+                          ) : null}
+                        </div>
                       </div>
                     </td>
                     <td className="px-5 py-3 text-right text-sm text-foreground">
@@ -283,9 +297,9 @@ export default function ModelDetailPage() {
                     </td>
                     <td className="px-5 py-3">
                       {offering.is_active ? (
-                        <span className="rounded-full border border-green-200 bg-green-50 px-2 py-0.5 text-xs text-green-700">启用</span>
+                        <span className="inline-flex items-center rounded-full border border-green-200 bg-green-50 px-2 py-0.5 text-xs text-green-700">启用</span>
                       ) : (
-                        <span className="rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-xs text-red-600">已废弃</span>
+                        <span className="inline-flex items-center rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-xs text-red-600">已废弃</span>
                       )}
                     </td>
                     <td className="px-5 py-3">
@@ -349,6 +363,18 @@ export default function ModelDetailPage() {
                     ))}
                 </select>
               )}
+            </div>
+
+            <div>
+              <label className="mb-1 block text-sm font-medium text-foreground">服务商模型名</label>
+              <Input
+                value={form.provider_model_id}
+                onChange={(e) => setForm({ ...form, provider_model_id: e.target.value })}
+                placeholder="如 deepseek/deepseek-v3/community"
+              />
+              <p className="mt-1 text-xs text-muted-foreground">
+                该模型在此服务商的 API 模型名称，留空则使用默认标识
+              </p>
             </div>
 
             <div className="grid grid-cols-2 gap-3">

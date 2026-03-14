@@ -1,9 +1,10 @@
-"use client";
+﻿"use client";
 
-import { useEffect, useState, useCallback } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { useCallback, useEffect, useState } from "react";
+import { Blocks, Edit3, Plus, Power, PowerOff, RefreshCw, Trash2 } from "lucide-react";
+
 import { Pagination } from "@/components/pagination";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -12,30 +13,35 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  testingApi,
-  type Provider,
-  type ProviderCreate,
-} from "@/lib/api/testing";
+import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
-import {
-  Plus,
-  RefreshCw,
-  Blocks,
-  Edit3,
-  PowerOff,
-  Power,
-} from "lucide-react";
+import { testingApi, type Provider, type ProviderCreate } from "@/lib/api/testing";
 
-// 空状态表单
-const emptyForm: ProviderCreate = {
+type ProviderFormState = ProviderCreate & {
+  probe_api_base_url: string;
+  probe_api_key: string;
+};
+
+const emptyForm: ProviderFormState = {
   slug: "",
   name: "",
   logo_url: "",
   is_active: true,
+  probe_api_base_url: "",
+  probe_api_key: "",
 };
 
 const PAGE_SIZE = 20;
+
+function getErrorDetail(error: unknown, fallback: string) {
+  return (
+    (error as { response?: { data?: { detail?: string; message?: string } } })?.response?.data
+      ?.detail ||
+    (error as { response?: { data?: { detail?: string; message?: string } } })?.response?.data
+      ?.message ||
+    fallback
+  );
+}
 
 export default function ProvidersPage() {
   const [providers, setProviders] = useState<Provider[]>([]);
@@ -45,9 +51,8 @@ export default function ProvidersPage() {
   const [saving, setSaving] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingProvider, setEditingProvider] = useState<Provider | null>(null);
-  const [form, setForm] = useState<ProviderCreate>(emptyForm);
+  const [form, setForm] = useState<ProviderFormState>(emptyForm);
 
-  // 加载供应商列表
   const loadProviders = useCallback(async () => {
     setLoading(true);
     try {
@@ -55,24 +60,22 @@ export default function ProvidersPage() {
       setProviders(data.items);
       setTotal(data.total);
     } catch (error) {
-      console.error("加载供应商失败:", error);
+      console.error("加载服务商失败:", error);
     } finally {
       setLoading(false);
     }
   }, [page]);
 
   useEffect(() => {
-    loadProviders();
+    void loadProviders();
   }, [loadProviders]);
 
-  // 打开新增对话框
   const handleAdd = () => {
     setEditingProvider(null);
     setForm(emptyForm);
     setDialogOpen(true);
   };
 
-  // 打开编辑对话框
   const handleEdit = (provider: Provider) => {
     setEditingProvider(provider);
     setForm({
@@ -80,62 +83,94 @@ export default function ProvidersPage() {
       name: provider.name,
       logo_url: provider.logo_url || "",
       is_active: provider.is_active,
+      probe_api_base_url: provider.probe_config?.probe_api_base_url || "",
+      probe_api_key: "",
     });
     setDialogOpen(true);
   };
 
-  // 保存供应商
   const handleSave = async () => {
     setSaving(true);
     try {
       if (editingProvider) {
-        await testingApi.updateProvider(editingProvider.id, form);
+        const updateData: Partial<ProviderCreate> = {
+          name: form.name,
+          logo_url: form.logo_url || undefined,
+          probe_api_base_url: form.probe_api_base_url.trim() || null,
+        };
+        if (form.probe_api_key.trim()) {
+          updateData.probe_api_key = form.probe_api_key.trim();
+        }
+        await testingApi.updateProvider(editingProvider.id, updateData);
       } else {
-        await testingApi.createProvider(form);
+        const createData: ProviderCreate = {
+          slug: form.slug,
+          name: form.name,
+          logo_url: form.logo_url || undefined,
+          is_active: form.is_active,
+          probe_api_base_url: form.probe_api_base_url.trim() || undefined,
+          probe_api_key: form.probe_api_key.trim() || undefined,
+        };
+        await testingApi.createProvider(createData);
       }
       setDialogOpen(false);
-      loadProviders();
-    } catch (error) {
-      console.error("保存供应商失败:", error);
-      toast.error("保存失败", "请重试");
+      await loadProviders();
+    } catch (error: unknown) {
+      console.error("保存服务商失败:", error);
+      toast.error("保存失败", getErrorDetail(error, "请重试"));
     } finally {
       setSaving(false);
     }
   };
 
-  // 切换状态
-  const toggleStatus = async (provider: Provider) => {
+  const handleToggleStatus = async (provider: Provider) => {
     try {
       await testingApi.updateProvider(provider.id, {
         is_active: !provider.is_active,
       });
-      loadProviders();
-    } catch (error) {
-      console.error("更新状态失败:", error);
+      await loadProviders();
+    } catch (error: unknown) {
+      console.error("更新服务商状态失败:", error);
+      toast.error("操作失败", getErrorDetail(error, "请重试"));
+    }
+  };
+
+  const handleDelete = async (provider: Provider) => {
+    if (!confirm(`确认删除服务商“${provider.name}”吗？`)) return;
+
+    try {
+      await testingApi.deleteProvider(provider.id);
+      toast.success("删除成功", `服务商“${provider.name}”已删除`);
+      if (providers.length === 1 && page > 1) {
+        setPage((current) => current - 1);
+      } else {
+        await loadProviders();
+      }
+    } catch (error: unknown) {
+      console.error("删除服务商失败:", error);
+      toast.error("删除失败", getErrorDetail(error, "请重试"));
     }
   };
 
   return (
     <div className="page-stack">
-      {/* 头部 */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-foreground">服务商管理</h1>
           <p className="mt-1 text-sm text-muted-foreground">管理 AI 模型服务商信息</p>
         </div>
         <div className="flex gap-3">
-          <Button variant="outline" onClick={loadProviders} disabled={loading}>
-            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`} />
+          <Button variant="outline" onClick={() => void loadProviders()} disabled={loading}>
+            <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
             刷新
           </Button>
           <Button onClick={handleAdd}>
-            <Plus className="w-4 h-4 mr-2" />
+            <Plus className="mr-2 h-4 w-4" />
             新增服务商
           </Button>
         </div>
       </div>
 
-      {/* 供应商列表 */}
       {loading ? (
         <div className="panel py-16">
           <RefreshCw className="mx-auto h-8 w-8 animate-spin text-primary" />
@@ -166,9 +201,9 @@ export default function ProvidersPage() {
                           src={provider.logo_url}
                           alt={provider.name}
                           className="h-10 w-10 rounded-lg border border-border bg-secondary object-contain"
-                          onError={(e) => {
-                            e.currentTarget.style.display = "none";
-                            e.currentTarget.nextElementSibling?.removeAttribute("style");
+                          onError={(event) => {
+                            event.currentTarget.style.display = "none";
+                            event.currentTarget.nextElementSibling?.removeAttribute("style");
                           }}
                         />
                       ) : null}
@@ -182,36 +217,45 @@ export default function ProvidersPage() {
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <code className="rounded bg-secondary px-2 py-1 text-sm text-muted-foreground">
+                    <code className="inline-flex items-center rounded bg-secondary px-2 py-1 text-sm text-muted-foreground">
                       {provider.slug}
                     </code>
                   </td>
                   <td className="px-6 py-4">
                     <span
-                      className={`rounded-full border px-2 py-1 text-xs ${
+                      className={`inline-flex items-center rounded-full border px-2 py-1 text-xs ${
                         provider.is_active
                           ? "border-green-200 bg-green-50 text-green-700"
-                          : "border-red-200 bg-red-50 text-red-600"
+                          : "border-orange-200 bg-orange-50 text-orange-600"
                       }`}
                     >
-                      {provider.is_active ? "启用" : "废弃"}
+                      {provider.is_active ? "启用" : "弃用"}
                     </span>
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center justify-end gap-2">
                       <Button variant="ghost" size="sm" onClick={() => handleEdit(provider)}>
-                        <Edit3 className="w-4 h-4" />
+                        <Edit3 className="h-4 w-4" />
                       </Button>
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => toggleStatus(provider)}
+                        onClick={() => void handleToggleStatus(provider)}
+                        title={provider.is_active ? "弃用服务商" : "启用服务商"}
                       >
                         {provider.is_active ? (
-                          <PowerOff className="w-4 h-4 text-orange-500" />
+                          <PowerOff className="h-4 w-4 text-orange-500" />
                         ) : (
-                          <Power className="w-4 h-4 text-green-500" />
+                          <Power className="h-4 w-4 text-green-500" />
                         )}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => void handleDelete(provider)}
+                        title="删除服务商"
+                      >
+                        <Trash2 className="h-4 w-4 text-red-500" />
                       </Button>
                     </div>
                   </td>
@@ -219,18 +263,12 @@ export default function ProvidersPage() {
               ))}
             </tbody>
           </table>
-          <Pagination
-            page={page}
-            pageSize={PAGE_SIZE}
-            total={total}
-            onPageChange={setPage}
-          />
+          <Pagination page={page} pageSize={PAGE_SIZE} total={total} onPageChange={setPage} />
         </div>
       )}
 
-      {/* 新增/编辑对话框 */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>{editingProvider ? "编辑服务商" : "新增服务商"}</DialogTitle>
             <DialogDescription>
@@ -242,7 +280,7 @@ export default function ProvidersPage() {
               <label className="mb-1 block text-sm font-medium text-foreground">服务商名称 *</label>
               <Input
                 value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                onChange={(event) => setForm({ ...form, name: event.target.value })}
                 placeholder="例如：OpenAI"
               />
             </div>
@@ -250,7 +288,7 @@ export default function ProvidersPage() {
               <label className="mb-1 block text-sm font-medium text-foreground">Slug *</label>
               <Input
                 value={form.slug}
-                onChange={(e) => setForm({ ...form, slug: e.target.value })}
+                onChange={(event) => setForm({ ...form, slug: event.target.value })}
                 placeholder="例如：openai"
                 disabled={!!editingProvider}
               />
@@ -259,8 +297,33 @@ export default function ProvidersPage() {
               <label className="mb-1 block text-sm font-medium text-foreground">Logo URL</label>
               <Input
                 value={form.logo_url}
-                onChange={(e) => setForm({ ...form, logo_url: e.target.value })}
+                onChange={(event) => setForm({ ...form, logo_url: event.target.value })}
                 placeholder="https://..."
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-foreground">Base URL</label>
+              <Input
+                value={form.probe_api_base_url}
+                onChange={(event) =>
+                  setForm({ ...form, probe_api_base_url: event.target.value })
+                }
+                placeholder="https://api.example.com/v1"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-foreground">
+                Probe API Key
+              </label>
+              <Input
+                type="password"
+                value={form.probe_api_key}
+                onChange={(event) => setForm({ ...form, probe_api_key: event.target.value })}
+                placeholder={
+                  editingProvider?.probe_config?.has_probe_api_key
+                    ? `已配置 ${editingProvider.probe_config.probe_api_key_masked || "API Key"}，留空则保持不变`
+                    : "输入用于探测/路由的 API Key"
+                }
               />
             </div>
           </div>
@@ -268,7 +331,7 @@ export default function ProvidersPage() {
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
               取消
             </Button>
-            <Button onClick={handleSave} disabled={saving || !form.name || !form.slug}>
+            <Button onClick={() => void handleSave()} disabled={saving || !form.name || !form.slug}>
               {saving ? "保存中..." : "保存"}
             </Button>
           </DialogFooter>

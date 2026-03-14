@@ -4,7 +4,7 @@ import type { AdminLoginRequest, AdminUserInfo, DashboardStats } from "@/types";
 // 登录响应数据
 interface LoginData {
   user: {
-    uid: number;
+    uid: string;
     email: string;
     name: string;
     role: string;
@@ -18,7 +18,13 @@ export const authApi = {
   // 登录
   login: async (data: AdminLoginRequest): Promise<LoginData> => {
     const response = await apiClient.post<ApiResponse<LoginData>>("/api/v1/auth/login", data);
-    return response.data.data;
+    return {
+      ...response.data.data,
+      user: {
+        ...response.data.data.user,
+        uid: String(response.data.data.user.uid),
+      },
+    };
   },
 
   // 登出
@@ -29,7 +35,10 @@ export const authApi = {
   // 获取当前用户信息
   getCurrentUser: async (): Promise<AdminUserInfo> => {
     const response = await apiClient.get<ApiResponse<AdminUserInfo>>("/api/v1/auth/me");
-    return response.data.data;
+    return {
+      ...response.data.data,
+      uid: String(response.data.data.uid),
+    };
   },
 
   // 刷新 Token

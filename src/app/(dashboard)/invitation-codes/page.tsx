@@ -306,7 +306,7 @@ export default function InvitationCodesPage() {
                     >
                       <td className="py-4 px-6">
                         <div className="flex items-center gap-3">
-                          <code className="rounded-lg border border-border bg-secondary px-3 py-1.5 font-mono text-sm text-foreground">
+                          <code className="inline-flex items-center rounded-lg border border-border bg-secondary px-3 py-1.5 font-mono text-sm text-foreground">
                             {code.code}
                           </code>
                           <button

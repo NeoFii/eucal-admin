@@ -1,12 +1,8 @@
-export { apiClient, default } from "./client-core";
-export type { ApiResponse } from "./client-core";
-/*
 import axios from "axios";
 import { attachAuthRefreshInterceptor } from "./auth-interceptor";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_ADMIN_API_URL || "http://localhost:8001";
 
-// 后端统一响应格式
 export interface ApiResponse<T> {
   code: number;
   message: string;
@@ -22,10 +18,6 @@ export const apiClient = axios.create({
   withCredentials: true,
 });
 
-// 响应拦截器 - 处理错误
 attachAuthRefreshInterceptor(apiClient);
-      // 清除 Zustand 认证状态
-      // 跳转到登录页
 
 export default apiClient;
-*/

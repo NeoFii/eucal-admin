@@ -1,0 +1,527 @@
+"use client";
+
+import Link from "next/link";
+import type { AxiosError } from "axios";
+import { useCallback, useEffect, useState } from "react";
+import {
+  AlertTriangle,
+  KeyRound,
+  Plus,
+  ScrollText,
+  Shield,
+  UserCog,
+  UserRoundCheck,
+  UserRoundX,
+} from "lucide-react";
+import { PageHeader } from "@/components/page-header";
+import { EmptyState } from "@/components/empty-state";
+import { Pagination } from "@/components/pagination";
+import { LoadingSpinner } from "@/components/loading-spinner";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { toast } from "@/hooks/use-toast";
+import { adminUsersApi } from "@/lib/api/admin-users";
+import { useAuthStore } from "@/stores/auth";
+import type { AdminListItem, CreateAdminRequest } from "@/types";
+
+const ROLE_CONFIG = {
+  super_admin: {
+    label: "超级管理员",
+    className: "border-primary/20 bg-primary/10 text-primary",
+  },
+  admin: {
+    label: "管理员",
+    className: "border-border bg-secondary text-secondary-foreground",
+  },
+} as const;
+
+const STATUS_CONFIG = {
+  0: {
+    label: "已禁用",
+    className: "border-red-200 bg-red-50 text-red-700",
+  },
+  1: {
+    label: "正常",
+    className: "border-green-200 bg-green-50 text-green-700",
+  },
+} as const;
+
+const EMPTY_CREATE_FORM: CreateAdminRequest = {
+  email: "",
+  name: "",
+  password: "",
+};
+
+function getErrorMessage(error: unknown, fallback: string) {
+  const axiosError = error as AxiosError<{ message?: string }>;
+  return axiosError.response?.data?.message || fallback;
+}
+
+export default function AdminUsersPage() {
+  const user = useAuthStore((state) => state.user);
+  const [mounted, setMounted] = useState(false);
+  const isSuperAdmin = user?.role === "super_admin";
+
+  const [admins, setAdmins] = useState<AdminListItem[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [pageSize] = useState(10);
+  const [loading, setLoading] = useState(true);
+
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createForm, setCreateForm] = useState<CreateAdminRequest>(EMPTY_CREATE_FORM);
+  const [creating, setCreating] = useState(false);
+
+  const [statusTarget, setStatusTarget] = useState<{ admin: AdminListItem; nextStatus: 0 | 1 } | null>(null);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
+
+  const [resetTarget, setResetTarget] = useState<AdminListItem | null>(null);
+  const [newPassword, setNewPassword] = useState("");
+  const [resettingPassword, setResettingPassword] = useState(false);
+
+  const fetchAdmins = useCallback(async () => {
+    if (!isSuperAdmin) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    try {
+      const data = await adminUsersApi.list({ page, page_size: pageSize });
+      setAdmins(data.items);
+      setTotal(data.total);
+    } catch (error) {
+      toast.error("加载管理员失败", getErrorMessage(error, "请稍后重试"));
+    } finally {
+      setLoading(false);
+    }
+  }, [isSuperAdmin, page, pageSize]);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    fetchAdmins();
+  }, [fetchAdmins]);
+
+  const reloadList = useCallback(async () => {
+    await fetchAdmins();
+  }, [fetchAdmins]);
+
+  const handleCreateAdmin = async () => {
+    if (!createForm.email.trim() || !createForm.name.trim() || !createForm.password.trim()) {
+      toast.error("信息不完整", "请填写邮箱、姓名和密码");
+      return;
+    }
+
+    setCreating(true);
+    try {
+      const created = await adminUsersApi.create({
+        email: createForm.email.trim(),
+        name: createForm.name.trim(),
+        password: createForm.password,
+      });
+      toast.success("创建成功", `管理员 ${created.name} 已创建`);
+      setCreateForm(EMPTY_CREATE_FORM);
+      setCreateOpen(false);
+      if (page !== 1) {
+        setPage(1);
+      } else {
+        await reloadList();
+      }
+    } catch (error) {
+      toast.error("创建失败", getErrorMessage(error, "请检查输入后重试"));
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const handleUpdateStatus = async () => {
+    if (!statusTarget) {
+      return;
+    }
+
+    setUpdatingStatus(true);
+    try {
+      await adminUsersApi.updateStatus(statusTarget.admin.uid, { status: statusTarget.nextStatus });
+      toast.success(
+        statusTarget.nextStatus === 1 ? "已启用管理员" : "已禁用管理员",
+        `${statusTarget.admin.name} 的状态已更新`
+      );
+      setStatusTarget(null);
+      await reloadList();
+    } catch (error) {
+      toast.error("状态更新失败", getErrorMessage(error, "请稍后重试"));
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (!resetTarget || !newPassword.trim()) {
+      toast.error("密码不能为空", "请输入新的管理员密码");
+      return;
+    }
+
+    setResettingPassword(true);
+    try {
+      await adminUsersApi.resetPassword(resetTarget.uid, { new_password: newPassword });
+      toast.success("密码已重置", `${resetTarget.name} 需要使用新密码登录`);
+      setResetTarget(null);
+      setNewPassword("");
+      await reloadList();
+    } catch (error) {
+      toast.error("重置失败", getErrorMessage(error, "请检查密码规则后重试"));
+    } finally {
+      setResettingPassword(false);
+    }
+  };
+
+  if (!mounted) {
+    return (
+      <Card>
+        <CardContent className="p-8">
+          <LoadingSpinner text="正在加载管理员治理界面..." />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!isSuperAdmin) {
+    return (
+      <div className="page-stack">
+        <PageHeader
+          icon={UserCog}
+          title="管理员管理"
+          subtitle="该区域仅供超级管理员使用，用于创建普通管理员、禁用账号和重置密码。"
+        />
+
+        <Card className="table-shell">
+          <CardContent className="p-0">
+            <EmptyState
+              icon={Shield}
+              title="当前账号没有访问权限"
+              description="只有 super_admin 才能进入管理员治理页面。普通管理员请返回控制台继续处理业务内容。"
+              action={
+                <Button asChild>
+                  <Link href="/">返回仪表盘</Link>
+                </Button>
+              }
+            />
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className="page-stack">
+      <PageHeader
+        icon={UserCog}
+        title="管理员管理"
+        subtitle={`仅超级管理员可访问。当前共 ${total} 个管理员账号。`}
+        actions={
+          <Button onClick={() => setCreateOpen(true)} className="bg-primary hover:bg-primary/90 text-white">
+            <Plus className="mr-2 h-4 w-4" />
+            创建管理员
+          </Button>
+        }
+      />
+
+      <Card className="panel hidden">
+        <CardContent className="grid gap-4 p-5 lg:grid-cols-[minmax(0,1fr)_auto_auto] lg:items-center">
+          <div>
+            <p className="text-sm font-medium text-foreground">治理范围</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              当前页面只管理普通管理员账号。超级管理员账号不会出现在可操作集合里。
+            </p>
+          </div>
+          <Button asChild variant="outline">
+            <Link href="/admin-audit-logs?category=governance">
+              <ScrollText className="mr-2 h-4 w-4" />
+              鏌ョ湅娌荤悊瀹¤
+            </Link>
+          </Button>
+          <div className="rounded-xl border border-primary/15 bg-primary/10 px-3 py-2 text-sm text-primary">
+            当前登录：{user?.name} / 超级管理员
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="panel">
+        <CardContent className="grid gap-4 p-5 lg:grid-cols-[minmax(0,1fr)_auto_auto] lg:items-center">
+          <div>
+            <p className="text-sm font-medium text-foreground">治理范围</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              当前页面只管理普通管理员账号。超级管理员账号不会出现在可操作集合里。
+            </p>
+          </div>
+          <Button asChild variant="outline" className="justify-center self-start lg:self-center">
+            <Link href="/admin-audit-logs?category=governance">
+              <ScrollText className="mr-2 h-4 w-4" />
+              查看治理审计
+            </Link>
+          </Button>
+          <div className="flex min-h-10 items-center rounded-xl border border-primary/15 bg-primary/10 px-3 py-2 text-sm text-primary">
+            当前登录：{user?.name} / 超级管理员
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="table-shell">
+        <div className="overflow-hidden">
+          {loading ? (
+            <LoadingSpinner text="正在加载管理员列表..." />
+          ) : admins.length === 0 ? (
+            <EmptyState
+              icon={UserCog}
+              title="还没有普通管理员"
+              description="你可以先创建一个普通管理员账号，再将日常业务操作分配出去。"
+              action={
+                <Button onClick={() => setCreateOpen(true)}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  创建第一个管理员
+                </Button>
+              }
+            />
+          ) : (
+            <table className="w-full">
+              <thead>
+                <tr className="table-head border-b border-border">
+                  <th className="px-6 py-4 text-center text-sm font-semibold">管理员</th>
+                  <th className="px-6 py-4 text-center text-sm font-semibold">角色</th>
+                  <th className="px-6 py-4 text-center text-sm font-semibold">状态</th>
+                  <th className="px-6 py-4 text-center text-sm font-semibold">最近登录</th>
+                  <th className="px-6 py-4 text-center text-sm font-semibold">创建时间</th>
+                  <th className="px-6 py-4 text-center text-sm font-semibold">操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                {admins.map((admin) => {
+                  const role = ROLE_CONFIG[admin.role];
+                  const status = STATUS_CONFIG[admin.status as 0 | 1];
+                  const isImmutable = admin.role === "super_admin";
+
+                  return (
+                    <tr key={admin.uid} className="table-row">
+                      <td className="px-6 py-4 text-center">
+                        <div className="flex flex-col items-center gap-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-foreground">{admin.name}</span>
+                            {admin.uid === user?.uid ? (
+                              <span className="inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
+                                当前登录
+                              </span>
+                            ) : null}
+                          </div>
+                          <span className="text-sm text-muted-foreground">{admin.email}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium ${role.className}`}>
+                          {role.label}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium ${status.className}`}>
+                          {status.label}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-center text-sm text-muted-foreground">
+                        {admin.last_login_at ? new Date(admin.last_login_at).toLocaleString("zh-CN") : "从未登录"}
+                      </td>
+                      <td className="px-6 py-4 text-center text-sm text-muted-foreground">
+                        {new Date(admin.created_at).toLocaleString("zh-CN")}
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        {isImmutable ? (
+                          <span className="text-sm text-muted-foreground">系统治理账号</span>
+                        ) : (
+                          <div className="flex items-center justify-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setResetTarget(admin);
+                                setNewPassword("");
+                              }}
+                            >
+                              <KeyRound className="mr-1 h-3.5 w-3.5" />
+                              重置密码
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() =>
+                                setStatusTarget({
+                                  admin,
+                                  nextStatus: admin.status === 1 ? 0 : 1,
+                                })
+                              }
+                              className={
+                                admin.status === 1
+                                  ? "border-red-200 text-red-600 hover:border-red-300 hover:bg-red-50 hover:text-red-700"
+                                  : "border-green-200 text-green-600 hover:border-green-300 hover:bg-green-50 hover:text-green-700"
+                              }
+                            >
+                              {admin.status === 1 ? (
+                                <>
+                                  <UserRoundX className="mr-1 h-3.5 w-3.5" />
+                                  禁用
+                                </>
+                              ) : (
+                                <>
+                                  <UserRoundCheck className="mr-1 h-3.5 w-3.5" />
+                                  启用
+                                </>
+                              )}
+                            </Button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
+
+          {!loading && admins.length > 0 ? (
+            <Pagination page={page} pageSize={pageSize} total={total} onPageChange={setPage} showPageInfo />
+          ) : null}
+        </div>
+      </Card>
+
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>创建普通管理员</DialogTitle>
+            <DialogDescription>新建账号默认角色为 admin，创建后可立即登录后台。</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="admin-name">姓名</Label>
+              <Input
+                id="admin-name"
+                value={createForm.name}
+                onChange={(event) => setCreateForm((prev) => ({ ...prev, name: event.target.value }))}
+                placeholder="请输入管理员姓名"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="admin-email">邮箱</Label>
+              <Input
+                id="admin-email"
+                type="email"
+                value={createForm.email}
+                onChange={(event) => setCreateForm((prev) => ({ ...prev, email: event.target.value }))}
+                placeholder="admin@example.com"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="admin-password">初始密码</Label>
+              <Input
+                id="admin-password"
+                type="password"
+                value={createForm.password}
+                onChange={(event) => setCreateForm((prev) => ({ ...prev, password: event.target.value }))}
+                placeholder="请输入符合规则的密码"
+              />
+              <p className="text-xs text-muted-foreground">密码规则由后端统一校验，建议包含大小写字母、数字和特殊字符。</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setCreateOpen(false);
+                setCreateForm(EMPTY_CREATE_FORM);
+              }}
+            >
+              取消
+            </Button>
+            <Button onClick={handleCreateAdmin} disabled={creating}>
+              {creating ? "创建中..." : "确认创建"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!statusTarget} onOpenChange={(open) => !open && setStatusTarget(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{statusTarget?.nextStatus === 1 ? "启用管理员" : "禁用管理员"}</DialogTitle>
+            <DialogDescription>请确认本次管理员状态变更。</DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <div className="flex items-start gap-3 rounded-xl bg-orange-50 p-4">
+              <AlertTriangle className="mt-0.5 h-5 w-5 text-orange-500" />
+              <div>
+                <p className="font-medium text-foreground">{statusTarget?.admin.name}</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {statusTarget?.nextStatus === 1
+                    ? "启用后，该管理员可以重新登录并访问后台。"
+                    : "禁用后，该管理员将无法继续访问后台接口。"}
+                </p>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setStatusTarget(null)}>
+              取消
+            </Button>
+            <Button onClick={handleUpdateStatus} disabled={updatingStatus}>
+              {updatingStatus ? "提交中..." : "确认"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={!!resetTarget}
+        onOpenChange={(open) => {
+          if (!open) {
+            setResetTarget(null);
+            setNewPassword("");
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>重置管理员密码</DialogTitle>
+            <DialogDescription>请输入 {resetTarget?.name ?? "该管理员"} 的新密码。</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 py-2">
+            <Label htmlFor="reset-password">新密码</Label>
+            <Input
+              id="reset-password"
+              type="password"
+              value={newPassword}
+              onChange={(event) => setNewPassword(event.target.value)}
+              placeholder="请输入新密码"
+            />
+            <p className="text-xs text-muted-foreground">该操作会触发后端审计，但不会展示或保存明文密码。</p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setResetTarget(null)}>
+              取消
+            </Button>
+            <Button onClick={handleResetPassword} disabled={resettingPassword}>
+              {resettingPassword ? "提交中..." : "确认重置"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

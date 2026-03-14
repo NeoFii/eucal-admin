@@ -29,6 +29,10 @@ export interface InvitationCodeListResponse {
   page_size: number;
 }
 
+export interface GenerateInvitationCodeResponse {
+  codes: InvitationCode[];
+}
+
 // 生成邀请码请求
 export interface GenerateInvitationCodeRequest {
   quantity?: number;
@@ -54,8 +58,11 @@ export const invitationCodeApi = {
 
   // 生成邀请码
   generate: async (data: GenerateInvitationCodeRequest): Promise<InvitationCode[]> => {
-    const response = await apiClient.post<ApiResponse<InvitationCode[]>>("/api/v1/invitation-codes/generate", data);
-    return response.data.data;
+    const response = await apiClient.post<ApiResponse<GenerateInvitationCodeResponse>>(
+      "/api/v1/invitation-codes/generate",
+      data
+    );
+    return response.data.data.codes;
   },
 
   // 更新邀请码
