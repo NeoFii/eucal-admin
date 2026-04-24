@@ -177,16 +177,6 @@ export interface ModelCategoryUpdate {
   is_active?: boolean;
 }
 
-export interface ModelOfferingItem {
-  id: number;
-  provider: Record<string, unknown>;
-  price_input_per_m: number | null;
-  price_output_per_m: number | null;
-  price_updated_at: string | null;
-  is_active: boolean;
-  metrics: Record<string, unknown> | null;
-}
-
 export interface SupportedModelItem {
   id: number;
   slug: string;
@@ -206,7 +196,6 @@ export interface SupportedModelItem {
 
 export interface SupportedModelDetail extends SupportedModelItem {
   is_active: boolean;
-  offerings: ModelOfferingItem[];
 }
 
 export interface SupportedModelCreate {

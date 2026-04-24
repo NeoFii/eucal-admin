@@ -72,8 +72,6 @@ export default function ModelDetailPage() {
     );
   }
 
-  const offerings = model.offerings ?? [];
-
   return (
     <div className="page-stack max-w-5xl">
       <button
@@ -175,56 +173,6 @@ export default function ModelDetailPage() {
             ))}
           </div>
         ) : null}
-      </div>
-
-      <div className="page-stack">
-        <h2 className="text-lg font-semibold text-foreground">支持的服务商</h2>
-
-        {offerings.length === 0 ? (
-          <div className="panel border-dashed py-12 text-center text-sm text-muted-foreground">
-            暂无服务商报价信息。
-          </div>
-        ) : (
-          <div className="table-shell">
-            <table className="w-full">
-              <thead className="table-head border-b border-border">
-                <tr>
-                  <th className="px-5 py-3 text-left text-sm font-medium">服务商</th>
-                  <th className="px-5 py-3 text-right text-sm font-medium">输入价格 / M</th>
-                  <th className="px-5 py-3 text-right text-sm font-medium">输出价格 / M</th>
-                  <th className="px-5 py-3 text-left text-sm font-medium">状态</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {offerings.map((offering) => (
-                  <tr
-                    key={offering.id}
-                    className={offering.is_active ? "table-row" : "bg-secondary/65 text-muted-foreground"}
-                  >
-                    <td className="px-5 py-3">
-                      <span className="font-medium text-foreground">
-                        {(offering.provider as { name?: string })?.name ?? `服务商 #${offering.id}`}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3 text-right text-sm text-foreground">
-                      {offering.price_input_per_m != null ? `¥ ${offering.price_input_per_m}` : "—"}
-                    </td>
-                    <td className="px-5 py-3 text-right text-sm text-foreground">
-                      {offering.price_output_per_m != null ? `¥ ${offering.price_output_per_m}` : "—"}
-                    </td>
-                    <td className="px-5 py-3">
-                      {offering.is_active ? (
-                        <span className="inline-flex items-center whitespace-nowrap rounded-full border border-green-200 bg-green-50 px-2 py-0.5 text-xs text-green-700">启用</span>
-                      ) : (
-                        <span className="inline-flex items-center whitespace-nowrap rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-xs text-red-600">已废弃</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
       </div>
 
       <ConfirmDialog

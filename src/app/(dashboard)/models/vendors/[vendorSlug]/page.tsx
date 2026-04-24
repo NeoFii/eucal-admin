@@ -291,7 +291,7 @@ export default function VendorModelsPage() {
           <EmptyState
             icon={Blocks}
             title="这个研发商下还没有模型"
-            description="先创建第一个模型，后续再进入模型详情维护服务商报价和评测数据。"
+            description="先创建第一个模型，后续再进入模型详情维护评测数据。"
             action={
               <Button
                 onClick={() => {
