@@ -32,6 +32,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { getErrorDetail } from "@/lib/errors";
+import { formatShanghaiDateTime } from "@/lib/time";
 
 const sidebarItems = [
   {
@@ -158,12 +159,14 @@ export default function DashboardLayout({
   const currentTitle = sidebarItems.find((item) => isActive(item.href))?.title ?? "管理后台";
   const isDashboard = pathname === "/";
   const now = new Date();
-  const dashboardTimeLabel = `最后更新：${now.toLocaleString("zh-CN")} · ${now.toLocaleDateString("zh-CN", {
+  const dashboardDateLabel = new Intl.DateTimeFormat("zh-CN", {
+    timeZone: "Asia/Shanghai",
     weekday: "long",
     year: "numeric",
     month: "long",
     day: "numeric",
-  })}`;
+  }).format(now);
+  const dashboardTimeLabel = `最后更新：${formatShanghaiDateTime(now)} · ${dashboardDateLabel}`;
 
   const roleLabel = isSuperAdmin ? "超级管理员" : "管理员";
 

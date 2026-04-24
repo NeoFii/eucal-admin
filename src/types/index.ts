@@ -241,9 +241,9 @@ export interface VoucherCode {
   status: number;
   starts_at: string;
   expires_at: string;
-  redeemed_user_id: number | null;
+  redeemed_user_uid: string | null;
   redeemed_at: string | null;
-  created_by_admin_uid: number | null;
+  created_by_admin_uid: string | null;
   remark: string | null;
   created_at: string;
   updated_at: string;

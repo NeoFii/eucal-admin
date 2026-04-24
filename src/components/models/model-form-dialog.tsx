@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { parseNonNegativeIntegerInput } from "@/lib/pricing";
 import type {
   ModelCategoryItem,
   ModelVendorItem,
@@ -123,6 +124,19 @@ export function ModelFormDialog({
     await onSubmit(payload);
   };
 
+  const updateIntegerFen = (
+    field: "price_input_per_m_fen" | "price_output_per_m_fen",
+    value: string,
+  ) => {
+    if (value !== "" && !/^\d+$/.test(value)) {
+      return;
+    }
+    setForm((current) => ({
+      ...current,
+      [field]: parseNonNegativeIntegerInput(value),
+    }));
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
@@ -207,28 +221,22 @@ export function ModelFormDialog({
             <div>
               <label className="mb-1 block text-sm font-medium text-foreground">输入价格(分/百万token)</label>
               <Input
-                type="number"
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
                 value={form.price_input_per_m_fen ?? ""}
-                onChange={(event) =>
-                  setForm((current) => ({
-                    ...current,
-                    price_input_per_m_fen: event.target.value ? Number(event.target.value) : undefined,
-                  }))
-                }
+                onChange={(event) => updateIntegerFen("price_input_per_m_fen", event.target.value)}
                 placeholder="例如：1500"
               />
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium text-foreground">输出价格(分/百万token)</label>
               <Input
-                type="number"
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
                 value={form.price_output_per_m_fen ?? ""}
-                onChange={(event) =>
-                  setForm((current) => ({
-                    ...current,
-                    price_output_per_m_fen: event.target.value ? Number(event.target.value) : undefined,
-                  }))
-                }
+                onChange={(event) => updateIntegerFen("price_output_per_m_fen", event.target.value)}
                 placeholder="例如：6000"
               />
             </div>

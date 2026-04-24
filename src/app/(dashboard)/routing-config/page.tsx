@@ -37,6 +37,7 @@ import { usePaginatedData } from "@/hooks/use-paginated-data";
 import { routingConfigApi } from "@/lib/api/routing-config";
 import { useAuthStore } from "@/stores/auth";
 import { getErrorDetail } from "@/lib/errors";
+import { formatShanghaiDateTime } from "@/lib/time";
 import type {
   CredentialItem,
   CredentialCreate,
@@ -384,8 +385,8 @@ function VersionsTab() {
       },
     },
     { key: "desc", header: "描述", headerClassName: "px-6 py-4 text-sm font-semibold", className: "px-6 py-4 text-sm text-muted-foreground", render: (v) => v.description || "-" },
-    { key: "published_at", header: "发布时间", headerClassName: "px-6 py-4 text-sm font-semibold", className: "px-6 py-4 text-sm text-muted-foreground", render: (v) => v.published_at ? new Date(v.published_at).toLocaleString("zh-CN") : "-" },
-    { key: "created_at", header: "创建时间", headerClassName: "px-6 py-4 text-sm font-semibold", className: "px-6 py-4 text-sm text-muted-foreground", render: (v) => new Date(v.created_at).toLocaleString("zh-CN") },
+    { key: "published_at", header: "发布时间", headerClassName: "px-6 py-4 text-sm font-semibold", className: "px-6 py-4 text-sm text-muted-foreground", render: (v) => v.published_at ? formatShanghaiDateTime(v.published_at) : "-" },
+    { key: "created_at", header: "创建时间", headerClassName: "px-6 py-4 text-sm font-semibold", className: "px-6 py-4 text-sm text-muted-foreground", render: (v) => formatShanghaiDateTime(v.created_at) },
     {
       key: "actions", header: "操作", headerClassName: "px-6 py-4 text-center text-sm font-semibold", className: "px-6 py-4 text-center",
       render: (v) => (
@@ -420,7 +421,7 @@ function VersionsTab() {
               </div>
               <span className="inline-flex items-center whitespace-nowrap rounded-full border border-green-200 bg-green-50 px-3 py-1 text-xs font-medium text-green-700">已发布</span>
               {activeVersion.published_at && (
-                <p className="text-sm text-muted-foreground">发布于 {new Date(activeVersion.published_at).toLocaleString("zh-CN")}</p>
+                <p className="text-sm text-muted-foreground">发布于 {formatShanghaiDateTime(activeVersion.published_at)}</p>
               )}
               {activeVersion.description && (
                 <p className="text-sm text-muted-foreground">— {activeVersion.description}</p>

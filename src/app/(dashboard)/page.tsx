@@ -2,6 +2,7 @@
 
 import { Card, CardContent } from "@/components/ui/card";
 import { useAuthStore } from "@/stores/auth";
+import { formatShanghaiDateTime } from "@/lib/time";
 import { LayoutDashboard, Shield, Clock } from "lucide-react";
 
 export default function DashboardPage() {
@@ -41,7 +42,7 @@ export default function DashboardPage() {
               </div>
               <p className="mt-2 text-lg font-semibold text-foreground">
                 {user?.last_login_at
-                  ? new Date(user.last_login_at).toLocaleString("zh-CN")
+                  ? formatShanghaiDateTime(user.last_login_at)
                   : "—"}
               </p>
             </div>

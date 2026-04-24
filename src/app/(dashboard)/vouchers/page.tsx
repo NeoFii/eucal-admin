@@ -19,6 +19,11 @@ import { usePaginatedData } from "@/hooks/use-paginated-data";
 import { getErrorDetail } from "@/lib/errors";
 import { voucherApi } from "@/lib/api/vouchers";
 import {
+  formatShanghaiDateTime,
+  formatShanghaiDateTimeLocalInput,
+  toShanghaiApiDateTime,
+} from "@/lib/time";
+import {
   VOUCHER_STATUS,
   getVoucherDisplayState,
   getVoucherStatusClass,
@@ -46,22 +51,21 @@ function formatFenToYuan(fen: number): string {
 }
 
 function formatDateTime(value: string | null | undefined): string {
-  return value ? new Date(value).toLocaleString("zh-CN") : "-";
+  return formatShanghaiDateTime(value);
 }
 
-function formatId(value: number | null | undefined): string {
+function formatId(value: string | null | undefined): string {
   return value == null ? "-" : String(value);
 }
 
 function getDefaultStartsAt(): string {
-  const now = new Date();
-  return now.toISOString().slice(0, 16);
+  return formatShanghaiDateTimeLocalInput();
 }
 
 function getDefaultExpiresAt(): string {
   const d = new Date();
   d.setDate(d.getDate() + 30);
-  return d.toISOString().slice(0, 16);
+  return formatShanghaiDateTimeLocalInput(d);
 }
 
 export default function VouchersPage() {
@@ -94,8 +98,8 @@ export default function VouchersPage() {
       const created = await voucherApi.generate({
         amount: genAmount,
         count: genCount,
-        starts_at: genStartsAt,
-        expires_at: genExpiresAt,
+        starts_at: toShanghaiApiDateTime(genStartsAt),
+        expires_at: toShanghaiApiDateTime(genExpiresAt),
         remark: genRemark || undefined,
       });
       setGeneratedCodes(created);
@@ -206,7 +210,7 @@ export default function VouchersPage() {
       render: (v) => (
         <div className="flex items-center gap-2 whitespace-nowrap text-sm text-muted-foreground">
           <Clock className="h-4 w-4 shrink-0" />
-          {new Date(v.starts_at).toLocaleString("zh-CN")}
+          {formatShanghaiDateTime(v.starts_at)}
         </div>
       ),
     },
@@ -216,7 +220,7 @@ export default function VouchersPage() {
       render: (v) => (
         <div className="flex items-center gap-2 whitespace-nowrap text-sm text-muted-foreground">
           <Clock className="h-4 w-4 shrink-0" />
-          {new Date(v.expires_at).toLocaleString("zh-CN")}
+          {formatShanghaiDateTime(v.expires_at)}
         </div>
       ),
     },
@@ -442,7 +446,7 @@ export default function VouchersPage() {
                   <p className="text-sm font-medium text-foreground">使用信息</p>
                   <div className="mt-3 space-y-2 text-sm text-muted-foreground">
                     <p>使用时间：{formatDateTime(detailCode.redeemed_at)}</p>
-                    <p>使用人 ID：{formatId(detailCode.redeemed_user_id)}</p>
+                    <p>使用人 UID：{formatId(detailCode.redeemed_user_uid)}</p>
                   </div>
                 </div>
               </div>
