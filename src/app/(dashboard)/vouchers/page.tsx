@@ -18,6 +18,12 @@ import {
 import { usePaginatedData } from "@/hooks/use-paginated-data";
 import { getErrorDetail } from "@/lib/errors";
 import { voucherApi } from "@/lib/api/vouchers";
+import {
+  VOUCHER_STATUS,
+  getVoucherDisplayState,
+  getVoucherStatusClass,
+  getVoucherStatusText,
+} from "@/lib/voucher-status";
 import { toast } from "@/hooks/use-toast";
 import type { VoucherCode, CreatedVoucherCode } from "@/types";
 import {
@@ -32,10 +38,19 @@ import {
   XCircle,
   Sparkles,
   CopyCheck,
+  Eye,
 } from "lucide-react";
 
 function formatFenToYuan(fen: number): string {
   return (fen / 100).toFixed(2);
+}
+
+function formatDateTime(value: string | null | undefined): string {
+  return value ? new Date(value).toLocaleString("zh-CN") : "-";
+}
+
+function formatId(value: number | null | undefined): string {
+  return value == null ? "-" : String(value);
 }
 
 function getDefaultStartsAt(): string {
@@ -56,6 +71,9 @@ export default function VouchersPage() {
   const [showCodesDialog, setShowCodesDialog] = useState(false);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<VoucherCode | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [detailCode, setDetailCode] = useState<VoucherCode | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
   const [statusFilter, setStatusFilter] = useState<number | undefined>(undefined);
 
   // Generate form state
@@ -124,30 +142,37 @@ export default function VouchersPage() {
     }
   };
 
-  const getStatusText = (code: VoucherCode) => {
-    if (code.status === 0) {
-      if (new Date(code.expires_at) < new Date()) return "已过期";
-      if (new Date(code.starts_at) > new Date()) return "未生效";
-      return "有效";
+  const handleViewDetail = async (code: VoucherCode) => {
+    setDetailCode(code);
+    setDetailOpen(true);
+    setDetailLoading(true);
+    try {
+      const detail = await voucherApi.getDetail(code.id);
+      setDetailCode(detail);
+    } catch (error) {
+      toast.error("加载详情失败", getErrorDetail(error, "请稍后重试"));
+    } finally {
+      setDetailLoading(false);
     }
-    if (code.status === 1) return "已兑换";
-    if (code.status === 2) return "已作废";
-    return "未知";
   };
 
-  const getStatusClass = (code: VoucherCode) => {
-    const text = getStatusText(code);
-    if (text === "有效") return "bg-green-50 text-green-700 border-green-200";
-    if (text === "已兑换") return "bg-blue-50 text-blue-700 border-blue-200";
-    return "bg-red-50 text-red-700 border-red-200";
+  const renderStatusIcon = (code: VoucherCode) => {
+    const state = getVoucherDisplayState(code);
+    if (state === "valid" || state === "redeemed") {
+      return <CheckCircle2 className="h-3.5 w-3.5" />;
+    }
+    if (state === "pending") {
+      return <Clock className="h-3.5 w-3.5" />;
+    }
+    return <XCircle className="h-3.5 w-3.5" />;
   };
 
   type FilterOption = { value: number | undefined; label: string };
   const filterOptions: FilterOption[] = [
     { value: undefined, label: "全部" },
-    { value: 0, label: "未兑换" },
-    { value: 1, label: "已兑换" },
-    { value: 2, label: "已作废" },
+    { value: VOUCHER_STATUS.ACTIVE, label: "未兑换" },
+    { value: VOUCHER_STATUS.REDEEMED, label: "已兑换" },
+    { value: VOUCHER_STATUS.DISABLED, label: "已作废" },
   ];
 
   const columns: Column<VoucherCode>[] = [
@@ -169,9 +194,9 @@ export default function VouchersPage() {
       key: "status",
       header: "状态",
       render: (v) => (
-        <span className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-medium ${getStatusClass(v)}`}>
-          {getStatusText(v) === "有效" ? <CheckCircle2 className="h-3.5 w-3.5" /> : <XCircle className="h-3.5 w-3.5" />}
-          {getStatusText(v)}
+        <span className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-medium ${getVoucherStatusClass(v)}`}>
+          {renderStatusIcon(v)}
+          {getVoucherStatusText(v)}
         </span>
       ),
     },
@@ -203,15 +228,20 @@ export default function VouchersPage() {
     {
       key: "actions",
       header: "操作",
-      render: (v) =>
-        v.status === 0 ? (
-          <Button variant="outline" size="sm" onClick={() => setDeleteConfirm(v)} className="whitespace-nowrap border-red-200 text-red-600 hover:border-red-300 hover:bg-red-50">
-            <Trash2 className="mr-1 h-3 w-3" />
-            作废
+      render: (v) => (
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => void handleViewDetail(v)} className="whitespace-nowrap">
+            <Eye className="mr-1 h-3.5 w-3.5" />
+            查看
           </Button>
-        ) : (
-          <span className="whitespace-nowrap text-sm text-muted-foreground">{getStatusText(v)}</span>
-        ),
+          {v.status === VOUCHER_STATUS.ACTIVE ? (
+            <Button variant="outline" size="sm" onClick={() => setDeleteConfirm(v)} className="whitespace-nowrap border-red-200 text-red-600 hover:border-red-300 hover:bg-red-50">
+              <Trash2 className="mr-1 h-3 w-3" />
+              作废
+            </Button>
+          ) : null}
+        </div>
+      ),
     },
   ];
 
@@ -335,6 +365,97 @@ export default function VouchersPage() {
               全部复制
             </Button>
             <Button onClick={() => setShowCodesDialog(false)}>关闭</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={detailOpen}
+        onOpenChange={(open) => {
+          setDetailOpen(open);
+          if (!open) {
+            setDetailCode(null);
+            setDetailLoading(false);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Ticket className="h-4 w-4 text-primary" />
+              兑换码详情
+            </DialogTitle>
+            <DialogDescription>查看兑换码生命周期与使用记录。</DialogDescription>
+          </DialogHeader>
+
+          {detailCode ? (
+            <div className="space-y-4 py-2">
+              {detailLoading ? (
+                <div className="flex items-center gap-2 rounded-lg border border-border bg-secondary/40 px-3 py-2 text-sm text-muted-foreground">
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                  正在加载最新详情...
+                </div>
+              ) : null}
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="rounded-lg border border-border bg-secondary/40 p-4">
+                  <p className="text-sm font-medium text-foreground">基础信息</p>
+                  <div className="mt-3 space-y-2 text-sm text-muted-foreground">
+                    <p>
+                      兑换码：
+                      <code className="ml-1 rounded border border-border bg-white px-2 py-0.5 font-mono text-foreground">
+                        {detailCode.code_prefix}****{detailCode.code_suffix}
+                      </code>
+                    </p>
+                    <p>面额：{formatFenToYuan(detailCode.amount)} 元</p>
+                    <p className="flex items-center gap-2">
+                      当前状态：
+                      <span className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1 text-xs font-medium ${getVoucherStatusClass(detailCode)}`}>
+                        {renderStatusIcon(detailCode)}
+                        {getVoucherStatusText(detailCode)}
+                      </span>
+                    </p>
+                    <p>备注：{detailCode.remark || "-"}</p>
+                  </div>
+                </div>
+
+                <div className="rounded-lg border border-border bg-secondary/40 p-4">
+                  <p className="text-sm font-medium text-foreground">创建信息</p>
+                  <div className="mt-3 space-y-2 text-sm text-muted-foreground">
+                    <p>创建时间：{formatDateTime(detailCode.created_at)}</p>
+                    <p>创建人 UID：{formatId(detailCode.created_by_admin_uid)}</p>
+                    <p>更新时间：{formatDateTime(detailCode.updated_at)}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="rounded-lg border border-border bg-secondary/40 p-4">
+                  <p className="text-sm font-medium text-foreground">有效期</p>
+                  <div className="mt-3 space-y-2 text-sm text-muted-foreground">
+                    <p>生效时间：{formatDateTime(detailCode.starts_at)}</p>
+                    <p>过期时间：{formatDateTime(detailCode.expires_at)}</p>
+                  </div>
+                </div>
+
+                <div className="rounded-lg border border-border bg-secondary/40 p-4">
+                  <p className="text-sm font-medium text-foreground">使用信息</p>
+                  <div className="mt-3 space-y-2 text-sm text-muted-foreground">
+                    <p>使用时间：{formatDateTime(detailCode.redeemed_at)}</p>
+                    <p>使用人 ID：{formatId(detailCode.redeemed_user_id)}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 py-8 text-sm text-muted-foreground">
+              <RefreshCw className="h-4 w-4 animate-spin" />
+              正在加载详情...
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDetailOpen(false)}>关闭</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
