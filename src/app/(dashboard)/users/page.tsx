@@ -13,6 +13,7 @@ import { toast } from "@/hooks/use-toast";
 import { usePaginatedData } from "@/hooks/use-paginated-data";
 import { userManagementApi } from "@/lib/api/user-management";
 import { getErrorDetail } from "@/lib/errors";
+import { formatShanghaiDateTime } from "@/lib/time";
 import type { UserListItem } from "@/types";
 
 const STATUS_OPTIONS = [
@@ -64,6 +65,13 @@ export default function UsersPage() {
   const columns = useMemo<Column<UserListItem>[]>(
     () => [
       {
+        key: "uid",
+        header: "UID",
+        headerClassName: "px-6 py-4 text-center text-sm font-semibold",
+        className: "px-6 py-4 text-center font-mono text-sm text-muted-foreground",
+        render: (u) => u.uid,
+      },
+      {
         key: "email",
         header: "邮箱",
         headerClassName: "px-6 py-4 text-center text-sm font-semibold",
@@ -96,14 +104,14 @@ export default function UsersPage() {
         header: "最近登录",
         headerClassName: "px-6 py-4 text-center text-sm font-semibold",
         className: "px-6 py-4 text-center text-sm text-muted-foreground",
-        render: (u) => (u.last_login_at ? new Date(u.last_login_at).toLocaleString("zh-CN") : "从未登录"),
+        render: (u) => (u.last_login_at ? formatShanghaiDateTime(u.last_login_at) : "从未登录"),
       },
       {
         key: "created_at",
         header: "注册时间",
         headerClassName: "px-6 py-4 text-center text-sm font-semibold",
         className: "px-6 py-4 text-center text-sm text-muted-foreground",
-        render: (u) => new Date(u.created_at).toLocaleString("zh-CN"),
+        render: (u) => formatShanghaiDateTime(u.created_at),
       },
       {
         key: "actions",
@@ -129,7 +137,7 @@ export default function UsersPage() {
         <CardContent className="flex flex-wrap items-center gap-3 p-5">
           <div className="flex flex-1 items-center gap-2">
             <Input
-              placeholder="搜索邮箱..."
+              placeholder="搜索 UID 或邮箱..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSearch()}

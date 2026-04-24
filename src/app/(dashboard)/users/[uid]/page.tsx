@@ -33,6 +33,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { userManagementApi } from "@/lib/api/user-management";
 import { getErrorDetail } from "@/lib/errors";
+import { formatShanghaiDateTime } from "@/lib/time";
 import type {
   UserDetailData,
   UserTransactionItem,
@@ -65,7 +66,7 @@ export default function UserDetailPage() {
   const router = useRouter();
   const uidParam = params.uid;
   const uid = Array.isArray(uidParam) ? uidParam[0] : (uidParam ?? "");
-  const isValidUid = /^\d+$/.test(uid);
+  const isValidUid = uid.trim().length > 0;
 
   const [detail, setDetail] = useState<UserDetailData | null>(null);
   const [loadingDetail, setLoadingDetail] = useState(true);
@@ -274,7 +275,7 @@ export default function UserDetailPage() {
         key: "created_at", header: "时间",
         headerClassName: "px-6 py-4 text-center text-sm font-semibold",
         className: "px-6 py-4 text-center text-sm text-muted-foreground",
-        render: (t) => new Date(t.created_at).toLocaleString("zh-CN"),
+        render: (t) => formatShanghaiDateTime(t.created_at),
       },
     ],
     [],
@@ -318,7 +319,7 @@ export default function UserDetailPage() {
         key: "last_used_at", header: "最近使用",
         headerClassName: "px-6 py-4 text-center text-sm font-semibold",
         className: "px-6 py-4 text-center text-sm text-muted-foreground",
-        render: (k) => (k.last_used_at ? new Date(k.last_used_at).toLocaleString("zh-CN") : "从未使用"),
+        render: (k) => (k.last_used_at ? formatShanghaiDateTime(k.last_used_at) : "从未使用"),
       },
       {
         key: "actions", header: "操作",
@@ -393,9 +394,9 @@ export default function UserDetailPage() {
             <InfoItem label="已消费" value={formatYuan(detail.used_amount)} />
             <InfoItem label="总请求数" value={detail.total_requests.toLocaleString()} />
             <InfoItem label="总Token数" value={detail.total_tokens.toLocaleString()} />
-            <InfoItem label="最近登录" value={detail.last_login_at ? new Date(detail.last_login_at).toLocaleString("zh-CN") : "从未登录"} />
+            <InfoItem label="最近登录" value={detail.last_login_at ? formatShanghaiDateTime(detail.last_login_at) : "从未登录"} />
             <InfoItem label="登录IP" value={detail.last_login_ip || "-"} />
-            <InfoItem label="注册时间" value={new Date(detail.created_at).toLocaleString("zh-CN")} />
+            <InfoItem label="注册时间" value={formatShanghaiDateTime(detail.created_at)} />
           </div>
         </CardContent>
       </Card>

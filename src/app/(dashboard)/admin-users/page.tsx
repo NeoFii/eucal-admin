@@ -33,6 +33,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { usePaginatedData } from "@/hooks/use-paginated-data";
 import { adminUsersApi } from "@/lib/api/admin-users";
+import { formatShanghaiDateTime } from "@/lib/time";
 import { useAuthStore } from "@/stores/auth";
 import { getErrorDetail } from "@/lib/errors";
 import type { AdminListItem, CreateAdminRequest } from "@/types";
@@ -208,14 +209,14 @@ export default function AdminUsersPage() {
       headerClassName: "px-6 py-4 text-center text-sm font-semibold",
       className: "px-6 py-4 text-center text-sm text-muted-foreground",
       render: (admin) =>
-        admin.last_login_at ? new Date(admin.last_login_at).toLocaleString("zh-CN") : "从未登录",
+        admin.last_login_at ? formatShanghaiDateTime(admin.last_login_at) : "从未登录",
     },
     {
       key: "created_at",
       header: "创建时间",
       headerClassName: "px-6 py-4 text-center text-sm font-semibold",
       className: "px-6 py-4 text-center text-sm text-muted-foreground",
-      render: (admin) => new Date(admin.created_at).toLocaleString("zh-CN"),
+      render: (admin) => formatShanghaiDateTime(admin.created_at),
     },
     {
       key: "actions",

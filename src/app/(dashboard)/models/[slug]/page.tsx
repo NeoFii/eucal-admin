@@ -11,6 +11,7 @@ import { ArrowLeft, RefreshCw, Trash2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { mapCapabilityTags } from "@/lib/model-capabilities";
+import { formatFenPerMillionTokens } from "@/lib/pricing";
 
 export default function ModelDetailPage() {
   const params = useParams();
@@ -149,7 +150,7 @@ export default function ModelDetailPage() {
             <span className="whitespace-nowrap">
               输入价格：
               <span className="ml-1 font-medium text-foreground">
-                ¥{model.price_input_per_m_fen} 分/M
+                {formatFenPerMillionTokens(model.price_input_per_m_fen)}
               </span>
             </span>
           ) : null}
@@ -158,7 +159,7 @@ export default function ModelDetailPage() {
             <span className="whitespace-nowrap">
               输出价格：
               <span className="ml-1 font-medium text-foreground">
-                ¥{model.price_output_per_m_fen} 分/M
+                {formatFenPerMillionTokens(model.price_output_per_m_fen)}
               </span>
             </span>
           ) : null}

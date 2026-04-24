@@ -28,6 +28,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { adminAuditLogsApi } from "@/lib/api/admin-audit-logs";
+import { formatShanghaiDateTime } from "@/lib/time";
 import { useAuthStore } from "@/stores/auth";
 import type { AdminAuditCategory, AdminAuditLogItem } from "@/types";
 
@@ -279,7 +280,7 @@ export default function AdminAuditLogsPage() {
       key: "time",
       header: "时间",
       render: (log) => (
-        <span className="text-sm text-muted-foreground">{new Date(log.created_at).toLocaleString("zh-CN")}</span>
+        <span className="text-sm text-muted-foreground">{formatShanghaiDateTime(log.created_at)}</span>
       ),
     },
     {
@@ -538,7 +539,7 @@ export default function AdminAuditLogsPage() {
                       资源：{detailLog.resource_type}
                       {detailLog.resource_id ? ` / ${detailLog.resource_id}` : ""}
                     </p>
-                    <p>时间：{new Date(detailLog.created_at).toLocaleString("zh-CN")}</p>
+                    <p>时间：{formatShanghaiDateTime(detailLog.created_at)}</p>
                   </div>
                 </div>
                 <div className="rounded-2xl border border-border/80 bg-secondary/40 p-4">
