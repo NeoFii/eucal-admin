@@ -40,7 +40,7 @@ import type { AdminListItem, CreateAdminRequest } from "@/types";
 const ROLE_CONFIG = {
   super_admin: {
     label: "超级管理员",
-    className: "border-primary/20 bg-primary/10 text-primary",
+    className: "border-gray-300 bg-gray-100 text-gray-700",
   },
   admin: {
     label: "管理员",
@@ -165,7 +165,7 @@ export default function AdminUsersPage() {
           <div className="flex items-center gap-2">
             <span className="font-medium text-foreground">{admin.name}</span>
             {admin.uid === user?.uid ? (
-              <span className="inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
+              <span className="inline-flex items-center whitespace-nowrap rounded-full border border-gray-300 bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-700">
                 当前登录
               </span>
             ) : null}
@@ -182,7 +182,7 @@ export default function AdminUsersPage() {
       render: (admin) => {
         const role = ROLE_CONFIG[admin.role];
         return (
-          <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium ${role.className}`}>
+          <span className={`inline-flex items-center whitespace-nowrap rounded-full border px-3 py-1 text-xs font-medium ${role.className}`}>
             {role.label}
           </span>
         );
@@ -196,7 +196,7 @@ export default function AdminUsersPage() {
       render: (admin) => {
         const status = STATUS_CONFIG[admin.status as 0 | 1];
         return (
-          <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium ${status.className}`}>
+          <span className={`inline-flex items-center whitespace-nowrap rounded-full border px-3 py-1 text-xs font-medium ${status.className}`}>
             {status.label}
           </span>
         );
@@ -315,7 +315,7 @@ export default function AdminUsersPage() {
         title="管理员管理"
         subtitle={`仅超级管理员可访问。当前共 ${total} 个管理员账号。`}
         actions={
-          <Button onClick={() => setCreateOpen(true)} className="bg-primary hover:bg-primary/90 text-white">
+          <Button onClick={() => setCreateOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
             创建管理员
           </Button>
@@ -336,7 +336,7 @@ export default function AdminUsersPage() {
               查看治理审计
             </Link>
           </Button>
-          <div className="flex min-h-10 items-center rounded-xl border border-primary/15 bg-primary/10 px-3 py-2 text-sm text-primary">
+          <div className="flex min-h-10 items-center rounded-xl border border-gray-200 bg-gray-100 px-3 py-2 text-sm text-gray-700">
             当前登录：{user?.name} / 超级管理员
           </div>
         </CardContent>
@@ -427,8 +427,8 @@ export default function AdminUsersPage() {
         confirmLabel="确认"
         onConfirm={handleUpdateStatus}
       >
-        <div className="flex items-start gap-3 rounded-xl bg-orange-50 p-4">
-          <AlertTriangle className="mt-0.5 h-5 w-5 text-orange-500" />
+        <div className="flex items-start gap-3 rounded-xl bg-amber-50 p-4">
+          <AlertTriangle className="mt-0.5 h-5 w-5 text-amber-500" />
           <div>
             <p className="font-medium text-foreground">{statusTarget?.admin.name}</p>
             <p className="mt-1 text-sm text-muted-foreground">

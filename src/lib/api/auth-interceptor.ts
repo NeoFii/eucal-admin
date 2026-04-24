@@ -1,14 +1,12 @@
 import axios, { AxiosError, type AxiosInstance, type InternalAxiosRequestConfig } from "axios";
 import { useAuthStore } from "@/stores/auth";
 
-const ADMIN_API_BASE_URL = process.env.NEXT_PUBLIC_ADMIN_API_URL || "http://localhost:8001";
-
 type RetryableRequestConfig = InternalAxiosRequestConfig & {
   _retry?: boolean;
 };
 
 const refreshClient = axios.create({
-  baseURL: ADMIN_API_BASE_URL,
+  baseURL: "",
   timeout: 10000,
   headers: {
     "Content-Type": "application/json",
@@ -18,9 +16,9 @@ const refreshClient = axios.create({
 
 let refreshPromise: Promise<void> | null = null;
 
-const isLoginRequest = (url?: string): boolean => (url ?? "").includes("/api/v1/auth/login");
+const isLoginRequest = (url?: string): boolean => (url ?? "").includes("/api/v1/admin/auth/login");
 
-const isRefreshRequest = (url?: string): boolean => (url ?? "").includes("/api/v1/auth/refresh");
+const isRefreshRequest = (url?: string): boolean => (url ?? "").includes("/api/v1/admin/auth/refresh");
 
 const clearAuthAndRedirect = (): void => {
   useAuthStore.getState().clearAuth();
@@ -38,7 +36,7 @@ const clearAuthAndRedirect = (): void => {
 const refreshAuthSession = async (): Promise<void> => {
   if (!refreshPromise) {
     refreshPromise = refreshClient
-      .post("/api/v1/auth/refresh")
+      .post("/api/v1/admin/auth/refresh")
       .then(() => undefined)
       .finally(() => {
         refreshPromise = null;

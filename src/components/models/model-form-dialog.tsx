@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -14,35 +14,38 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import type {
-  Category,
-  ModelCreate,
-  ModelListItem,
-  ModelUpdate,
-  Vendor,
-} from "@/lib/api/testing";
+  ModelCategoryItem,
+  ModelVendorItem,
+  SupportedModelItem,
+  SupportedModelCreate,
+  SupportedModelUpdate,
+} from "@/types";
 
-const emptyForm = (vendorId: number): ModelCreate => ({
-  vendor_id: vendorId,
+const emptyForm = (vendorSlug: string): SupportedModelCreate => ({
+  vendor_slug: vendorSlug,
   slug: "",
   name: "",
+  summary: "",
   description: "",
+  price_input_per_m_fen: undefined,
+  price_output_per_m_fen: undefined,
   capability_tags: [],
   context_window: undefined,
   max_output_tokens: undefined,
   is_reasoning_model: false,
   sort_order: 0,
   is_active: true,
-  categories: [],
+  category_keys: [],
 });
 
 interface ModelFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  categories: Category[];
-  fixedVendor: Vendor;
-  model?: ModelListItem | null;
+  categories: ModelCategoryItem[];
+  fixedVendor: ModelVendorItem;
+  model?: SupportedModelItem | null;
   saving?: boolean;
-  onSubmit: (data: ModelCreate | ModelUpdate) => Promise<void> | void;
+  onSubmit: (data: SupportedModelCreate | SupportedModelUpdate) => Promise<void> | void;
 }
 
 export function ModelFormDialog({
@@ -54,15 +57,9 @@ export function ModelFormDialog({
   saving = false,
   onSubmit,
 }: ModelFormDialogProps) {
-  const [form, setForm] = useState<ModelCreate>(emptyForm(fixedVendor.id));
+  const [form, setForm] = useState<SupportedModelCreate>(emptyForm(fixedVendor.slug));
   const [tagsInput, setTagsInput] = useState("");
-  const [selectedCategoryIds, setSelectedCategoryIds] = useState<Set<number>>(new Set());
-
-  const categoryIdByKey = useMemo(
-    () =>
-      new Map(categories.map((category) => [category.key, category.id])),
-    [categories]
-  );
+  const [selectedCategoryKeys, setSelectedCategoryKeys] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!open) {
@@ -71,67 +68,56 @@ export function ModelFormDialog({
 
     if (model) {
       setForm({
-        vendor_id: fixedVendor.id,
+        vendor_slug: fixedVendor.slug,
         slug: model.slug,
         name: model.name,
+        summary: model.summary ?? "",
         description: model.description ?? "",
+        price_input_per_m_fen: model.price_input_per_m_fen ?? undefined,
+        price_output_per_m_fen: model.price_output_per_m_fen ?? undefined,
         capability_tags: model.capability_tags,
-        context_window: model.context_window,
-        max_output_tokens: model.max_output_tokens,
+        context_window: model.context_window ?? undefined,
+        max_output_tokens: model.max_output_tokens ?? undefined,
         is_reasoning_model: model.is_reasoning_model,
         sort_order: model.sort_order,
-        is_active: model.is_active ?? true,
-        categories: model.categories
-          .map((category) => ({
-            category_id: categoryIdByKey.get(category.key) ?? 0,
-            sort_order: category.sort_order,
-          }))
-          .filter((category) => category.category_id > 0),
+        is_active: true,
+        category_keys: model.categories.map((c) => c.key),
       });
       setTagsInput(model.capability_tags.join(", "));
-      setSelectedCategoryIds(
-        new Set(
-          model.categories
-            .map((category) => categoryIdByKey.get(category.key))
-            .filter((categoryId): categoryId is number => categoryId !== undefined)
-        )
-      );
+      setSelectedCategoryKeys(new Set(model.categories.map((c) => c.key)));
       return;
     }
 
-    setForm(emptyForm(fixedVendor.id));
+    setForm(emptyForm(fixedVendor.slug));
     setTagsInput("");
-    setSelectedCategoryIds(new Set());
-  }, [categoryIdByKey, fixedVendor.id, model, open]);
+    setSelectedCategoryKeys(new Set());
+  }, [fixedVendor.slug, model, open]);
 
-  const toggleCategory = (id: number) => {
-    setSelectedCategoryIds((current) => {
+  const toggleCategory = (key: string) => {
+    setSelectedCategoryKeys((current) => {
       const next = new Set(current);
-      if (next.has(id)) {
-        next.delete(id);
+      if (next.has(key)) {
+        next.delete(key);
       } else {
-        next.add(id);
+        next.add(key);
       }
       return next;
     });
   };
 
   const handleSubmit = async () => {
-    const categoriesPayload = Array.from(selectedCategoryIds).map((categoryId) => ({
-      category_id: categoryId,
-      sort_order: 0,
-    }));
-    const payload: ModelCreate = {
+    const payload: SupportedModelCreate = {
       ...form,
-      vendor_id: fixedVendor.id,
+      vendor_slug: fixedVendor.slug,
       slug: form.slug.trim(),
       name: form.name.trim(),
+      summary: form.summary?.trim() || undefined,
       description: form.description?.trim() || undefined,
       capability_tags: tagsInput
         .split(",")
         .map((tag) => tag.trim())
         .filter(Boolean),
-      categories: categoriesPayload,
+      category_keys: Array.from(selectedCategoryKeys),
     };
 
     await onSubmit(payload);
@@ -158,7 +144,7 @@ export function ModelFormDialog({
                   className="h-8 w-8 rounded-lg object-contain"
                 />
               ) : (
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-sm font-semibold text-primary">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100 text-sm font-semibold text-gray-600">
                   {fixedVendor.name.charAt(0).toUpperCase()}
                 </div>
               )}
@@ -199,6 +185,53 @@ export function ModelFormDialog({
               }
               placeholder="输入模型描述，支持 Markdown。"
             />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium text-foreground">
+              摘要
+              <span className="ml-1 font-normal text-muted-foreground">最多 255 字</span>
+            </label>
+            <Textarea
+              rows={3}
+              maxLength={255}
+              value={form.summary ?? ""}
+              onChange={(event) =>
+                setForm((current) => ({ ...current, summary: event.target.value }))
+              }
+              placeholder="简短描述模型特点"
+            />
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className="mb-1 block text-sm font-medium text-foreground">输入价格(分/百万token)</label>
+              <Input
+                type="number"
+                value={form.price_input_per_m_fen ?? ""}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    price_input_per_m_fen: event.target.value ? Number(event.target.value) : undefined,
+                  }))
+                }
+                placeholder="例如：1500"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-foreground">输出价格(分/百万token)</label>
+              <Input
+                type="number"
+                value={form.price_output_per_m_fen ?? ""}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    price_output_per_m_fen: event.target.value ? Number(event.target.value) : undefined,
+                  }))
+                }
+                placeholder="例如：6000"
+              />
+            </div>
           </div>
 
           <div>
@@ -266,7 +299,7 @@ export function ModelFormDialog({
                       is_reasoning_model: event.target.checked,
                     }))
                   }
-                  className="h-4 w-4 accent-orange-500"
+                  className="h-4 w-4 accent-gray-950"
                 />
                 推理模型
               </label>
@@ -277,7 +310,7 @@ export function ModelFormDialog({
                   onChange={(event) =>
                     setForm((current) => ({ ...current, is_active: event.target.checked }))
                   }
-                  className="h-4 w-4 accent-orange-500"
+                  className="h-4 w-4 accent-gray-950"
                 />
                 启用
               </label>
@@ -290,13 +323,13 @@ export function ModelFormDialog({
               <div className="flex flex-wrap gap-2">
                 {categories.map((category) => (
                   <button
-                    key={category.id}
+                    key={category.key}
                     type="button"
-                    onClick={() => toggleCategory(category.id)}
+                    onClick={() => toggleCategory(category.key)}
                     className={`rounded-full border px-3 py-1.5 text-sm transition-colors ${
-                      selectedCategoryIds.has(category.id)
-                        ? "border-primary bg-primary text-white"
-                        : "border-border bg-background text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                      selectedCategoryKeys.has(category.key)
+                        ? "border-gray-950 bg-gray-950 text-white"
+                        : "border-border bg-background text-muted-foreground hover:border-gray-400 hover:text-foreground"
                     }`}
                   >
                     {category.name}

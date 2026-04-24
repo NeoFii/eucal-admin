@@ -26,7 +26,7 @@ const normalizeAuditLog = <T extends {
 
 export const adminAuditLogsApi = {
   list: async (params?: AdminAuditLogsParams): Promise<AdminAuditLogListData> => {
-    const response = await apiClient.get<ApiResponse<AdminAuditLogListData>>("/api/v1/admin-audit-logs", {
+    const response = await apiClient.get<ApiResponse<AdminAuditLogListData>>("/api/v1/admin/admin-audit-logs", {
       params,
     });
     return {

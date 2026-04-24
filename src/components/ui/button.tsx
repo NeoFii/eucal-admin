@@ -4,20 +4,20 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center whitespace-nowrap rounded-xl text-sm font-medium leading-none ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg]:align-middle",
+  "inline-flex items-center justify-center whitespace-nowrap rounded-xl text-sm font-medium leading-none ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg]:align-middle",
   {
     variants: {
       variant: {
         default:
-          "bg-primary text-primary-foreground shadow-soft hover:-translate-y-px hover:bg-primary-600 hover:shadow-panel",
+          "bg-gray-950 text-white shadow-sm hover:bg-gray-800",
         destructive:
-          "bg-destructive text-destructive-foreground shadow-sm hover:-translate-y-px hover:bg-destructive/90",
+          "bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90",
         outline:
-          "border border-border/80 bg-white/80 text-foreground hover:bg-orange-50/70 hover:text-foreground",
+          "border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 hover:text-gray-950",
         secondary:
-          "bg-secondary/70 text-secondary-foreground hover:bg-secondary",
-        ghost: "hover:bg-orange-50/70 hover:text-foreground",
-        link: "text-primary underline-offset-4 hover:underline hover:text-primary-600",
+          "bg-gray-100 text-gray-700 hover:bg-gray-200",
+        ghost: "hover:bg-gray-100 hover:text-gray-950",
+        link: "text-gray-950 underline-offset-4 hover:underline",
       },
       size: {
         default: "h-10 px-4 py-2",

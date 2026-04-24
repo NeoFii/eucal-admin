@@ -22,15 +22,15 @@ import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
 import { LARGE_PAGE_SIZE } from "@/lib/constants";
 import { getErrorDetail } from "@/lib/errors";
-import {
-  testingApi,
-  type Category,
-  type ModelCreate,
-  type ModelListItem,
-  type ModelUpdate,
-  type Vendor,
-  type VendorCreate,
-} from "@/lib/api/testing";
+import { modelCatalogApi } from "@/lib/api/model-catalog";
+import type {
+  ModelVendorItem,
+  ModelVendorCreate,
+  SupportedModelItem,
+  SupportedModelCreate,
+  SupportedModelUpdate,
+  ModelCategoryItem,
+} from "@/types";
 import { mapCapabilityTags } from "@/lib/model-capabilities";
 
 export default function VendorModelsPage() {
@@ -38,9 +38,9 @@ export default function VendorModelsPage() {
   const router = useRouter();
   const vendorSlug = params.vendorSlug as string;
 
-  const [vendors, setVendors] = useState<Vendor[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [models, setModels] = useState<ModelListItem[]>([]);
+  const [vendors, setVendors] = useState<ModelVendorItem[]>([]);
+  const [categories, setCategories] = useState<ModelCategoryItem[]>([]);
+  const [models, setModels] = useState<SupportedModelItem[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
@@ -48,7 +48,7 @@ export default function VendorModelsPage() {
   const [vendorSaving, setVendorSaving] = useState(false);
   const [modelDialogOpen, setModelDialogOpen] = useState(false);
   const [vendorDialogOpen, setVendorDialogOpen] = useState(false);
-  const [editingModel, setEditingModel] = useState<ModelListItem | null>(null);
+  const [editingModel, setEditingModel] = useState<SupportedModelItem | null>(null);
 
   const vendor = useMemo(
     () => vendors.find((item) => item.slug === vendorSlug) ?? null,
@@ -57,15 +57,15 @@ export default function VendorModelsPage() {
 
   const loadVendorsAndCategories = useCallback(async () => {
     const [vendorItems, categoryItems] = await Promise.all([
-      testingApi.getAllVendors(),
-      testingApi.getCategories(),
+      modelCatalogApi.getAllVendors(),
+      modelCatalogApi.getAllCategories(),
     ]);
     setVendors(vendorItems);
     setCategories(categoryItems);
   }, []);
 
   const loadModels = useCallback(async () => {
-    const data = await testingApi.getModels({
+    const data = await modelCatalogApi.getModels({
       vendors: vendorSlug,
       page,
       page_size: LARGE_PAGE_SIZE,
@@ -99,15 +99,15 @@ export default function VendorModelsPage() {
     }
   };
 
-  const handleSaveVendor = async (data: VendorCreate) => {
+  const handleSaveVendor = async (data: ModelVendorCreate) => {
     if (!vendor) {
       return;
     }
 
     setVendorSaving(true);
     try {
-      await testingApi.updateVendor(vendor.id, data);
-      toast.success("保存成功", `研发商“${data.name}”已更新`);
+      await modelCatalogApi.updateVendor(vendor.slug, data);
+      toast.success("保存成功", `研发商「${data.name}」已更新`);
       setVendorDialogOpen(false);
       await loadVendorsAndCategories();
     } catch (error: unknown) {
@@ -118,35 +118,38 @@ export default function VendorModelsPage() {
     }
   };
 
-  const handleSaveModel = async (payload: ModelCreate | ModelUpdate) => {
+  const handleSaveModel = async (payload: SupportedModelCreate | SupportedModelUpdate) => {
     if (!vendor) {
       return;
     }
 
-    const modelPayload = payload as ModelCreate;
+    const modelPayload = payload as SupportedModelCreate;
     setModelSaving(true);
 
     try {
       if (editingModel) {
-        const updatePayload: ModelUpdate = {
+        const updatePayload: SupportedModelUpdate = {
           name: modelPayload.name,
+          summary: modelPayload.summary,
           description: modelPayload.description,
+          price_input_per_m_fen: modelPayload.price_input_per_m_fen,
+          price_output_per_m_fen: modelPayload.price_output_per_m_fen,
           capability_tags: modelPayload.capability_tags,
           context_window: modelPayload.context_window,
           max_output_tokens: modelPayload.max_output_tokens,
           is_reasoning_model: modelPayload.is_reasoning_model,
           sort_order: modelPayload.sort_order,
           is_active: modelPayload.is_active,
-          categories: modelPayload.categories,
+          category_keys: modelPayload.category_keys,
         };
-        await testingApi.updateModel(editingModel.slug, updatePayload);
-        toast.success("保存成功", `模型“${modelPayload.name}”已更新`);
+        await modelCatalogApi.updateModel(editingModel.slug, updatePayload);
+        toast.success("保存成功", `模型「${modelPayload.name}」已更新`);
       } else {
-        await testingApi.createModel({
+        await modelCatalogApi.createModel({
           ...modelPayload,
-          vendor_id: vendor.id,
+          vendor_slug: vendor.slug,
         });
-        toast.success("创建成功", `模型“${modelPayload.name}”已创建`);
+        toast.success("创建成功", `模型「${modelPayload.name}」已创建`);
       }
 
       setModelDialogOpen(false);
@@ -160,17 +163,17 @@ export default function VendorModelsPage() {
     }
   };
 
-  const handleEditModel = (event: MouseEvent<HTMLButtonElement>, model: ModelListItem) => {
+  const handleEditModel = (event: MouseEvent<HTMLButtonElement>, model: SupportedModelItem) => {
     event.stopPropagation();
     setEditingModel(model);
     setModelDialogOpen(true);
   };
 
-  const handleDisableModel = async (event: MouseEvent<HTMLButtonElement>, model: ModelListItem) => {
+  const handleDisableModel = async (event: MouseEvent<HTMLButtonElement>, model: SupportedModelItem) => {
     event.stopPropagation();
     try {
-      await testingApi.updateModel(model.slug, { is_active: false });
-      toast.success("状态已更新", `模型“${model.name}”已停用`);
+      await modelCatalogApi.updateModel(model.slug, { is_active: false });
+      toast.success("状态已更新", `模型"${model.name}"已停用`);
       await refreshModels();
     } catch (error: unknown) {
       console.error("停用模型失败:", error);
@@ -181,7 +184,7 @@ export default function VendorModelsPage() {
   if (loading) {
     return (
       <div className="panel py-24">
-        <RefreshCw className="mx-auto h-8 w-8 animate-spin text-primary" />
+        <RefreshCw className="mx-auto h-8 w-8 animate-spin text-gray-400" />
       </div>
     );
   }
@@ -247,14 +250,14 @@ export default function VendorModelsPage() {
       <Card className="border-border/70">
         <CardContent className="flex flex-col gap-5 p-5 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex min-w-0 items-center gap-4">
-            {vendor.logo_url ? (
+            {vendor.logo_url?.startsWith("http") ? (
               <img
                 src={vendor.logo_url}
                 alt={vendor.name}
                 className="h-16 w-16 rounded-2xl border border-border bg-secondary/40 object-contain"
               />
             ) : (
-              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 text-xl font-semibold text-primary">
+              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gray-100 text-xl font-semibold text-gray-600">
                 {vendor.name.charAt(0).toUpperCase()}
               </div>
             )}
@@ -266,15 +269,15 @@ export default function VendorModelsPage() {
           </div>
 
           <div className="flex items-center gap-4">
-            <div className="rounded-2xl border border-border/70 bg-secondary/30 px-4 py-3 text-center">
+            <div className="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-center">
               <div className="text-xs text-muted-foreground">当前模型数</div>
               <div className="mt-1 text-2xl font-semibold text-foreground">{total}</div>
             </div>
             <span
-              className={`inline-flex rounded-full border px-3 py-1.5 text-sm ${
-                vendor.is_active
+              className={`inline-flex items-center whitespace-nowrap rounded-full border px-3 py-1.5 text-sm ${
+                  vendor.is_active
                   ? "border-green-200 bg-green-50 text-green-700"
-                  : "border-orange-200 bg-orange-50 text-orange-600"
+                  : "border-gray-200 bg-gray-100 text-gray-600"
               }`}
             >
               {vendor.is_active ? "启用中" : "已停用"}
@@ -306,7 +309,6 @@ export default function VendorModelsPage() {
         <>
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {models.map((model) => {
-              const providerCount = model.provider_count ?? model.providers?.length ?? 0;
               const displayTags = mapCapabilityTags(model.capability_tags);
               const visibleTags = displayTags.slice(0, 4);
               const extraTags = displayTags.length - 4;
@@ -314,26 +316,17 @@ export default function VendorModelsPage() {
               return (
                 <Card
                   key={model.id}
-                  className="group cursor-pointer border-border/70 transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md"
+                  className="group cursor-pointer transition-all hover:-translate-y-0.5 hover:border-gray-300 hover:shadow-md"
                   onClick={() => router.push(`/models/${model.slug}`)}
                 >
                   <CardContent className="flex h-full flex-col gap-4 p-5">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <h3 className="truncate text-lg font-semibold text-foreground transition-colors group-hover:text-primary">
+                        <h3 className="truncate text-lg font-semibold text-foreground transition-colors group-hover:text-gray-700">
                           {model.name}
                         </h3>
                         <p className="mt-1 text-sm text-muted-foreground">{model.slug}</p>
                       </div>
-                      <span
-                        className={`inline-flex rounded-full border px-2 py-1 text-xs ${
-                          model.is_active === false
-                            ? "border-orange-200 bg-orange-50 text-orange-600"
-                            : "border-green-200 bg-green-50 text-green-700"
-                        }`}
-                      >
-                        {model.is_active === false ? "停用" : "启用"}
-                      </span>
                     </div>
 
                     {visibleTags.length > 0 ? (
@@ -341,13 +334,13 @@ export default function VendorModelsPage() {
                         {visibleTags.map((tag) => (
                           <span
                             key={tag}
-                            className="inline-flex items-center rounded bg-primary/10 px-2 py-0.5 text-xs text-primary"
+                            className="inline-flex items-center whitespace-nowrap rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-700"
                           >
                             {tag}
                           </span>
                         ))}
                         {extraTags > 0 ? (
-                          <span className="inline-flex items-center rounded bg-secondary px-2 py-0.5 text-xs text-muted-foreground">
+                          <span className="inline-flex items-center whitespace-nowrap rounded bg-secondary px-2 py-0.5 text-xs text-muted-foreground">
                             +{extraTags}
                           </span>
                         ) : null}
@@ -358,7 +351,7 @@ export default function VendorModelsPage() {
                       {model.categories.map((category) => (
                         <span
                           key={category.key}
-                          className="inline-flex items-center rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground"
+                          className="inline-flex items-center whitespace-nowrap rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground"
                         >
                           {category.name}
                         </span>
@@ -367,7 +360,6 @@ export default function VendorModelsPage() {
 
                     <div className="mt-auto flex items-center justify-between gap-4 pt-2">
                       <div className="space-y-1 text-sm text-muted-foreground">
-                        <div>{providerCount > 0 ? `${providerCount} 个服务商` : "暂无服务商"}</div>
                         {model.context_window ? <div>上下文 {model.context_window.toLocaleString()}</div> : null}
                       </div>
 
@@ -383,7 +375,7 @@ export default function VendorModelsPage() {
                         <button
                           type="button"
                           onClick={(event) => void handleDisableModel(event, model)}
-                          className="inline-flex items-center justify-center rounded-md p-2 text-muted-foreground transition-colors hover:bg-orange-50 hover:text-orange-600"
+                          className="inline-flex items-center justify-center rounded-md p-2 text-muted-foreground transition-colors hover:bg-gray-100 hover:text-gray-600"
                           title="停用模型"
                         >
                           <PowerOff className="h-4 w-4" />

@@ -20,8 +20,8 @@ export function Pagination({
   if (totalPages <= 1) return null;
 
   return (
-    <div className="flex flex-col gap-3 border-t border-border/70 bg-gradient-to-r from-white/80 to-orange-50/60 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-      <div className="text-sm text-muted-foreground">
+    <div className="flex flex-col gap-3 border-t border-gray-100 bg-white px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="whitespace-nowrap text-sm text-muted-foreground">
         显示第 {(page - 1) * pageSize + 1} - {Math.min(page * pageSize, total)} 条，共 {total} 条
       </div>
       <div className="flex items-center gap-2">

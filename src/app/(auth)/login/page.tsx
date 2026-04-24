@@ -37,16 +37,12 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#FAF8F5] lg:flex">
-      <div className="pointer-events-none absolute -left-16 top-8 h-72 w-72 rounded-full bg-orange-300/30 blur-3xl" />
-      <div className="pointer-events-none absolute right-8 top-16 h-80 w-80 rounded-full bg-blue-300/20 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-20 left-1/3 h-72 w-72 rounded-full bg-emerald-300/20 blur-3xl" />
-
-      <section className="relative hidden min-h-screen overflow-hidden border-r border-white/60 lg:flex lg:w-[48%] lg:flex-col lg:justify-between lg:bg-gradient-to-br lg:from-slate-900 lg:via-slate-800 lg:to-slate-900 lg:p-12">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_18%,rgba(249,115,22,0.36),transparent_38%),radial-gradient(circle_at_82%_26%,rgba(59,130,246,0.3),transparent_36%),radial-gradient(circle_at_70%_80%,rgba(16,185,129,0.2),transparent_30%)]" />
+    <div className="relative min-h-screen overflow-hidden bg-gray-50 lg:flex">
+      <section className="relative hidden min-h-screen overflow-hidden border-r border-gray-800 lg:flex lg:w-[48%] lg:flex-col lg:justify-between lg:bg-gray-950 lg:p-12">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_18%,rgba(255,255,255,0.06),transparent_38%),radial-gradient(circle_at_82%_26%,rgba(255,255,255,0.04),transparent_36%)]" />
 
         <div className="relative z-10 flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 text-white shadow-lg shadow-primary-500/30">
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white text-gray-950 shadow-lg shadow-white/10">
             <Shield className="h-6 w-6" />
           </div>
           <div>
@@ -56,13 +52,13 @@ export default function LoginPage() {
         </div>
 
         <div className="relative z-10 max-w-md space-y-6">
-          <span className="inline-flex items-center gap-1 rounded-full border border-white/30 bg-white/10 px-3 py-1 text-xs font-medium text-white/95 backdrop-blur">
+          <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-white/30 bg-white/10 px-3 py-1 text-xs font-medium text-white/95 backdrop-blur">
             <Sparkles className="h-3.5 w-3.5" />
             Intelligent Control Center
           </span>
           <h1 className="text-4xl font-semibold leading-tight text-white xl:text-5xl">
             管理效率与品牌体验
-            <span className="mt-2 block bg-gradient-to-r from-orange-200 via-orange-100 to-sky-200 bg-clip-text text-transparent">
+            <span className="mt-2 block bg-gradient-to-r from-white via-gray-200 to-gray-400 bg-clip-text text-transparent">
               在同一界面统一达成
             </span>
           </h1>
@@ -79,7 +75,7 @@ export default function LoginPage() {
       <section className="relative flex min-h-screen flex-1 flex-col px-8 py-12 sm:px-12 lg:px-16">
         {/* 移动端顶部品牌 */}
         <div className="flex items-center gap-3 lg:hidden">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 text-white">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gray-950 text-white">
             <Shield className="h-5 w-5" />
           </div>
           <div>
@@ -112,6 +108,7 @@ export default function LoginPage() {
                   onChange={(e) => setEmail(e.target.value)}
                   className="h-11"
                   required
+                  autoComplete="email"
                 />
               </div>
 
@@ -126,6 +123,7 @@ export default function LoginPage() {
                     onChange={(e) => setPassword(e.target.value)}
                     className="h-11 pr-11"
                     required
+                    autoComplete="current-password"
                   />
                   <button
                     type="button"

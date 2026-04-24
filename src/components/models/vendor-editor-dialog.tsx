@@ -12,21 +12,22 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import type { Vendor, VendorCreate } from "@/lib/api/testing";
+import type { ModelVendorCreate, ModelVendorItem } from "@/types";
 
-const emptyForm: VendorCreate = {
+const emptyForm: ModelVendorCreate = {
   slug: "",
   name: "",
   logo_url: "",
   is_active: true,
+  sort_order: 0,
 };
 
 interface VendorEditorDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  vendor?: Vendor | null;
+  vendor?: ModelVendorItem | null;
   saving?: boolean;
-  onSubmit: (data: VendorCreate) => Promise<void> | void;
+  onSubmit: (data: ModelVendorCreate) => Promise<void> | void;
 }
 
 export function VendorEditorDialog({
@@ -36,7 +37,7 @@ export function VendorEditorDialog({
   saving = false,
   onSubmit,
 }: VendorEditorDialogProps) {
-  const [form, setForm] = useState<VendorCreate>(emptyForm);
+  const [form, setForm] = useState<ModelVendorCreate>(emptyForm);
 
   useEffect(() => {
     if (!open) {
@@ -49,6 +50,7 @@ export function VendorEditorDialog({
         name: vendor.name,
         logo_url: vendor.logo_url || "",
         is_active: vendor.is_active,
+        sort_order: vendor.sort_order,
       });
       return;
     }
@@ -62,6 +64,7 @@ export function VendorEditorDialog({
       name: form.name.trim(),
       logo_url: form.logo_url?.trim() || undefined,
       is_active: form.is_active,
+      sort_order: form.sort_order,
     });
   };
 
@@ -100,6 +103,22 @@ export function VendorEditorDialog({
                 setForm((current) => ({ ...current, logo_url: event.target.value }))
               }
               placeholder="https://..."
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-foreground">排序权重</label>
+            <Input
+              type="number"
+              min={0}
+              max={9999}
+              value={form.sort_order ?? 0}
+              onChange={(event) =>
+                setForm((current) => ({
+                  ...current,
+                  sort_order: Math.max(0, Math.min(9999, Number(event.target.value) || 0)),
+                }))
+              }
+              placeholder="0"
             />
           </div>
         </div>
