@@ -26,28 +26,28 @@ export const userManagementApi = {
     return response.data.data;
   },
 
-  getDetail: async (uid: number): Promise<UserDetailData> => {
+  getDetail: async (uid: string): Promise<UserDetailData> => {
     const response = await apiClient.get<ApiResponse<UserDetailData>>(`${BASE}/${uid}`);
     return response.data.data;
   },
 
-  updateStatus: async (uid: number, data: UpdateUserStatusRequest): Promise<void> => {
+  updateStatus: async (uid: string, data: UpdateUserStatusRequest): Promise<void> => {
     await apiClient.post(`${BASE}/${uid}/status`, data);
   },
 
-  resetPassword: async (uid: number, data: ResetUserPasswordRequest): Promise<void> => {
+  resetPassword: async (uid: string, data: ResetUserPasswordRequest): Promise<void> => {
     await apiClient.post(`${BASE}/${uid}/reset-password`, data);
   },
 
-  topup: async (uid: number, data: TopupUserRequest): Promise<void> => {
+  topup: async (uid: string, data: TopupUserRequest): Promise<void> => {
     await apiClient.post(`${BASE}/${uid}/topup`, data);
   },
 
-  adjustBalance: async (uid: number, data: AdjustUserBalanceRequest): Promise<void> => {
+  adjustBalance: async (uid: string, data: AdjustUserBalanceRequest): Promise<void> => {
     await apiClient.post(`${BASE}/${uid}/adjust-balance`, data);
   },
 
-  getTransactions: async (uid: number, params?: {
+  getTransactions: async (uid: string, params?: {
     page?: number;
     page_size?: number;
   }): Promise<PaginatedResponse<UserTransactionItem>> => {
@@ -55,12 +55,12 @@ export const userManagementApi = {
     return response.data.data;
   },
 
-  getApiKeys: async (uid: number): Promise<UserApiKeyItem[]> => {
+  getApiKeys: async (uid: string): Promise<UserApiKeyItem[]> => {
     const response = await apiClient.get<ApiResponse<UserApiKeyItem[]>>(`${BASE}/${uid}/api-keys`);
     return response.data.data;
   },
 
-  disableApiKey: async (uid: number, keyId: number): Promise<void> => {
+  disableApiKey: async (uid: string, keyId: number): Promise<void> => {
     await apiClient.post(`${BASE}/${uid}/api-keys/${keyId}/disable`);
   },
 

@@ -62,7 +62,9 @@ type Tab = "transactions" | "apikeys";
 export default function UserDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const uid = Number(params.uid);
+  const uidParam = params.uid;
+  const uid = Array.isArray(uidParam) ? uidParam[0] : (uidParam ?? "");
+  const isValidUid = /^\d+$/.test(uid);
 
   const [detail, setDetail] = useState<UserDetailData | null>(null);
   const [loadingDetail, setLoadingDetail] = useState(true);
@@ -91,18 +93,32 @@ export default function UserDetailPage() {
   const [adjustRemark, setAdjustRemark] = useState("");
 
   const loadDetail = useCallback(async () => {
+    if (!isValidUid) {
+      setDetail(null);
+      setLoadingDetail(false);
+      return;
+    }
+
     setLoadingDetail(true);
     try {
       const data = await userManagementApi.getDetail(uid);
       setDetail(data);
     } catch (error) {
+      setDetail(null);
       toast.error("加载用户详情失败", getErrorDetail(error, "请稍后重试"));
     } finally {
       setLoadingDetail(false);
     }
-  }, [uid]);
+  }, [isValidUid, uid]);
 
   const loadTransactions = useCallback(async () => {
+    if (!isValidUid) {
+      setTxList([]);
+      setTxTotal(0);
+      setTxLoading(false);
+      return;
+    }
+
     setTxLoading(true);
     try {
       const data = await userManagementApi.getTransactions(uid, { page: txPage, page_size: 10 });
@@ -113,9 +129,15 @@ export default function UserDetailPage() {
     } finally {
       setTxLoading(false);
     }
-  }, [uid, txPage]);
+  }, [isValidUid, uid, txPage]);
 
   const loadApiKeys = useCallback(async () => {
+    if (!isValidUid) {
+      setApiKeys([]);
+      setKeysLoading(false);
+      return;
+    }
+
     setKeysLoading(true);
     try {
       const data = await userManagementApi.getApiKeys(uid);
@@ -125,11 +147,11 @@ export default function UserDetailPage() {
     } finally {
       setKeysLoading(false);
     }
-  }, [uid]);
+  }, [isValidUid, uid]);
 
   useEffect(() => { void loadDetail(); }, [loadDetail]);
-  useEffect(() => { if (tab === "transactions") void loadTransactions(); }, [tab, loadTransactions]);
-  useEffect(() => { if (tab === "apikeys") void loadApiKeys(); }, [tab, loadApiKeys]);
+  useEffect(() => { if (isValidUid && tab === "transactions") void loadTransactions(); }, [isValidUid, tab, loadTransactions]);
+  useEffect(() => { if (isValidUid && tab === "apikeys") void loadApiKeys(); }, [isValidUid, tab, loadApiKeys]);
 
   const handleToggleStatus = async () => {
     if (!detail) return;

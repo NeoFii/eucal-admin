@@ -264,7 +264,7 @@ export interface GenerateVoucherRequest {
 // ── 用户管理 ──────────────────────────────────────────────
 
 export interface UserListItem {
-  uid: number;
+  uid: string;
   email: string;
   status: number;
   email_verified_at: string | null;
@@ -274,7 +274,7 @@ export interface UserListItem {
 }
 
 export interface UserDetailData {
-  uid: number;
+  uid: string;
   email: string;
   status: number;
   email_verified_at: string | null;
