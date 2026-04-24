@@ -6,7 +6,7 @@ import type {
   GenerateVoucherRequest,
 } from "@/types";
 
-const BASE = "/api/v1/admin/vouchers";
+const BASE = "/api/v1/vouchers";
 
 export const voucherApi = {
   generate: async (data: GenerateVoucherRequest): Promise<CreatedVoucherCode[]> => {

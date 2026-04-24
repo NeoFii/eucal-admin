@@ -16,9 +16,9 @@ const refreshClient = axios.create({
 
 let refreshPromise: Promise<void> | null = null;
 
-const isLoginRequest = (url?: string): boolean => (url ?? "").includes("/api/v1/admin/auth/login");
+const isLoginRequest = (url?: string): boolean => (url ?? "").includes("/api/v1/auth/login");
 
-const isRefreshRequest = (url?: string): boolean => (url ?? "").includes("/api/v1/admin/auth/refresh");
+const isRefreshRequest = (url?: string): boolean => (url ?? "").includes("/api/v1/auth/refresh");
 
 const clearAuthAndRedirect = (): void => {
   useAuthStore.getState().clearAuth();
@@ -36,7 +36,7 @@ const clearAuthAndRedirect = (): void => {
 const refreshAuthSession = async (): Promise<void> => {
   if (!refreshPromise) {
     refreshPromise = refreshClient
-      .post("/api/v1/admin/auth/refresh")
+      .post("/api/v1/auth/refresh")
       .then(() => undefined)
       .finally(() => {
         refreshPromise = null;

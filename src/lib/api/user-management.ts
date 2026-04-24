@@ -13,7 +13,7 @@ import type {
   AdjustUserBalanceRequest,
 } from "@/types";
 
-const BASE = "/api/v1/admin/users";
+const BASE = "/api/v1/users";
 
 export const userManagementApi = {
   getList: async (params?: {
