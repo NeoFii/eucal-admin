@@ -47,10 +47,11 @@ const STATUS_CONFIG: Record<number, { label: string; className: string }> = {
 const TX_TYPE_LABELS: Record<number, string> = {
   1: "充值",
   2: "消费",
-  3: "调账",
-  4: "退款",
-  5: "冻结",
-  6: "解冻",
+  3: "退款",
+  4: "冻结",
+  5: "解冻",
+  6: "调账",
+  7: "代金券",
 };
 
 function formatYuan(fen: number): string {
