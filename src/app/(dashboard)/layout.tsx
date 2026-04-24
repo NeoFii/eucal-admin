@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -81,6 +81,8 @@ export default function DashboardLayout({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+  const routerRef = useRef(router);
+  routerRef.current = router;
   const { user, setAuth, clearAuth } = useAuthStore();
   const [authReady, setAuthReady] = useState(false);
   const isSuperAdmin = user?.role === "super_admin";
@@ -103,7 +105,7 @@ export default function DashboardLayout({
         }
         clearAuth();
         setAuthReady(true);
-        router.push("/login");
+        routerRef.current.push("/login");
       }
     };
 
@@ -112,7 +114,8 @@ export default function DashboardLayout({
     return () => {
       cancelled = true;
     };
-  }, [clearAuth, router, setAuth]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clearAuth, setAuth]);
 
   const handleLogout = async () => {
     try {
