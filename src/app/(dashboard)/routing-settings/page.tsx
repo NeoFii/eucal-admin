@@ -5,16 +5,18 @@ import { Settings, Shield } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { EmptyState } from "@/components/empty-state";
 import { LoadingSpinner } from "@/components/loading-spinner";
+import { ModelCombobox } from "@/components/model-combobox";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
+import { poolsApi } from "@/lib/api/pools";
 import { routingSettingsApi } from "@/lib/api/routing-settings";
 import { formatShanghaiDateTime } from "@/lib/time";
 import { useAuthStore } from "@/stores/auth";
 import { getErrorDetail } from "@/lib/errors";
-import type { RoutingSettingItem } from "@/types";
+import type { RoutingSettingItem, AvailableModelSlug } from "@/types";
 
 const SIMPLE_GROUPS = ["general", "weights"] as const;
 const GROUP_LABELS: Record<string, string> = {
@@ -59,6 +61,7 @@ export default function RoutingSettingsPage() {
   const [loading, setLoading] = useState(true);
   const [formState, setFormState] = useState<Record<string, Record<string, string>>>({});
   const [tierRanges, setTierRanges] = useState<Record<number, string>>({});
+  const [availableModels, setAvailableModels] = useState<AvailableModelSlug[]>([]);
   const [saving, setSaving] = useState<Record<string, boolean>>({});
 
   useEffect(() => { setMounted(true); }, []);
@@ -79,6 +82,12 @@ export default function RoutingSettingsPage() {
       const scoreBandsItem = (result.score_bands ?? []).find((i) => i.key === "score_bands");
       if (scoreBandsItem) {
         setTierRanges(parseScoreBands(scoreBandsItem.value));
+      }
+      try {
+        const models = await poolsApi.getAvailableModels();
+        setAvailableModels(models);
+      } catch {
+        setAvailableModels([]);
       }
     } catch (e) {
       toast.error("加载失败", getErrorDetail(e, "无法获取路由设置"));
@@ -278,12 +287,29 @@ export default function RoutingSettingsPage() {
                       </div>
                       <div className="space-y-1">
                         <Label className="text-xs">调用模型</Label>
-                        <Input
+                        <ModelCombobox
                           value={formState.tier_model_map?.[item.key] ?? ""}
-                          onChange={(e) => handleFieldChange("tier_model_map", item.key, e.target.value)}
-                          placeholder="模型名称"
-                          className="text-sm"
+                          onChange={(v) => handleFieldChange("tier_model_map", item.key, v)}
+                          availableModels={availableModels}
+                          placeholder="选择或输入模型名称"
                         />
+                        {(() => {
+                          const currentModel = formState.tier_model_map?.[item.key] ?? "";
+                          if (!currentModel.trim()) return null;
+                          const info = availableModels.find((m) => m.model_slug === currentModel);
+                          if (info) {
+                            return (
+                              <span className="text-[11px] text-muted-foreground">
+                                号池：{info.pool_names.join("、")}
+                              </span>
+                            );
+                          }
+                          return (
+                            <span className="inline-flex items-center gap-1 text-[11px] text-red-600">
+                              ⚠ 无可用通道，保存将被拒绝
+                            </span>
+                          );
+                        })()}
                       </div>
                     </div>
                     <p className="mt-1.5 text-[11px] text-muted-foreground">

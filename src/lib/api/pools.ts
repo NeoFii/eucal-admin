@@ -13,11 +13,17 @@ import type {
   PoolAccountUpdate,
   SyncModelsResult,
   CheckBalancesResult,
+  AvailableModelSlug,
 } from "@/types";
 
 const BASE = "/api/v1/admin/pools";
 
 export const poolsApi = {
+  getAvailableModels: async (): Promise<AvailableModelSlug[]> => {
+    const response = await apiClient.get<ApiResponse<AvailableModelSlug[]>>(`${BASE}/available-models`);
+    return response.data.data;
+  },
+
   getList: async (params?: {
     page?: number;
     page_size?: number;

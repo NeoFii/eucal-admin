@@ -185,6 +185,7 @@ export interface SupportedModelItem {
   description: string | null;
   price_input_per_m_fen: number | null;
   price_output_per_m_fen: number | null;
+  price_cached_input_per_m_fen: number | null;
   capability_tags: string[];
   context_window: number | null;
   max_output_tokens: number | null;
@@ -206,6 +207,7 @@ export interface SupportedModelCreate {
   description?: string | null;
   price_input_per_m_fen?: number | null;
   price_output_per_m_fen?: number | null;
+  price_cached_input_per_m_fen?: number | null;
   capability_tags?: string[];
   context_window?: number | null;
   max_output_tokens?: number | null;
@@ -222,6 +224,7 @@ export interface SupportedModelUpdate {
   description?: string | null;
   price_input_per_m_fen?: number | null;
   price_output_per_m_fen?: number | null;
+  price_cached_input_per_m_fen?: number | null;
   capability_tags?: string[];
   context_window?: number | null;
   max_output_tokens?: number | null;
@@ -532,4 +535,11 @@ export interface AccountBalanceResult {
 
 export interface CheckBalancesResult {
   results: AccountBalanceResult[];
+}
+
+// ── 号池可用模型（用于 tier 选择） ─────────────────────────
+
+export interface AvailableModelSlug {
+  model_slug: string;
+  pool_names: string[];
 }
