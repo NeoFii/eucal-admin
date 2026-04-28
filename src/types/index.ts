@@ -376,73 +376,160 @@ export interface AdjustUserBalanceRequest {
   remark: string;
 }
 
-// ── 路由配置 ──────────────────────────────────────────────
+// ── 路由设置（key-value） ─────────────────────────────────
 
-export interface CredentialItem {
+export interface RoutingSettingItem {
+  key: string;
+  value: string;
+  value_type: string;
+  group_name: string;
+  label: string;
+  description: string | null;
+  sort_order: number;
+  updated_at: string;
+}
+
+export interface RoutingSettingBatchItem {
+  key: string;
+  value: string;
+}
+
+// ── 号池管理 ────────────────────────────────────────────
+
+export interface PoolModelItem {
   id: number;
-  slug: string;
-  provider_slug: string;
+  model_slug: string;
+  upstream_model_id: string;
+  input_price_per_million: number;
+  output_price_per_million: number;
+  cached_input_price_per_million: number | null;
+  context_length: number | null;
+  is_enabled: boolean;
+}
+
+export interface PoolAccountItem {
+  id: number;
+  name: string;
   mask: string;
-  is_active: boolean;
+  balance: number;
+  status: string;
+  rpm_limit: number | null;
+  tpm_limit: number | null;
+  weight: number;
+  last_checked_at: string | null;
   remark: string | null;
   created_at: string;
   updated_at: string;
 }
 
-export interface CredentialCreate {
-  slug: string;
-  provider_slug: string;
-  api_key: string;
-  remark?: string;
-}
-
-export interface CredentialUpdate {
-  provider_slug?: string;
-  api_key?: string;
-  remark?: string;
-  is_active?: boolean;
-}
-
-export interface ModelProviderBinding {
-  credential_slug: string;
-  api_base: string;
-  upstream_model: string;
-}
-
-export interface RoutingConfigData {
-  router_alias: string;
-  weights: Record<string, number>;
-  score_bands: string;
-  tier_model_map: Record<string, string>;
-  model_provider_bindings: Record<string, ModelProviderBinding>;
-}
-
-export interface RoutingConfigCreate {
-  description?: string;
-  config_data: RoutingConfigData;
-}
-
-export interface RoutingConfigUpdate {
-  description?: string;
-  config_data?: RoutingConfigData;
-}
-
-export interface RoutingConfigItem {
+export interface PoolItem {
   id: number;
-  version: number;
-  status: string;
-  description: string | null;
-  config_data: Record<string, unknown>;
-  published_at: string | null;
+  slug: string;
+  name: string;
+  base_url: string;
+  is_enabled: boolean;
+  priority: number;
+  weight: number;
+  health_check_endpoint: string | null;
+  remark: string | null;
+  model_count: number;
+  account_count: number;
   created_at: string;
   updated_at: string;
 }
 
-export interface RoutingConfigBrief {
+export interface PoolDetail {
   id: number;
-  version: number;
-  status: string;
-  description: string | null;
-  published_at: string | null;
+  slug: string;
+  name: string;
+  base_url: string;
+  is_enabled: boolean;
+  priority: number;
+  weight: number;
+  health_check_endpoint: string | null;
+  remark: string | null;
+  models: PoolModelItem[];
+  accounts: PoolAccountItem[];
   created_at: string;
+  updated_at: string;
+}
+
+export interface PoolCreate {
+  slug: string;
+  name: string;
+  base_url: string;
+  priority?: number;
+  weight?: number;
+  health_check_endpoint?: string;
+  remark?: string;
+}
+
+export interface PoolUpdate {
+  name?: string;
+  base_url?: string;
+  is_enabled?: boolean;
+  priority?: number;
+  weight?: number;
+  health_check_endpoint?: string;
+  remark?: string;
+}
+
+export interface PoolModelCreate {
+  model_slug: string;
+  upstream_model_id: string;
+  input_price_per_million?: number;
+  output_price_per_million?: number;
+  cached_input_price_per_million?: number;
+  context_length?: number;
+}
+
+export interface PoolModelUpdate {
+  upstream_model_id?: string;
+  input_price_per_million?: number;
+  output_price_per_million?: number;
+  cached_input_price_per_million?: number;
+  context_length?: number;
+  is_enabled?: boolean;
+}
+
+export interface PoolAccountCreate {
+  name: string;
+  api_key: string;
+  balance?: number;
+  rpm_limit?: number;
+  tpm_limit?: number;
+  weight?: number;
+  remark?: string;
+}
+
+export interface PoolAccountUpdate {
+  name?: string;
+  api_key?: string;
+  balance?: number;
+  status?: string;
+  rpm_limit?: number;
+  tpm_limit?: number;
+  weight?: number;
+  remark?: string;
+}
+
+// ── 号池自动化 ─────────────────────────────────────────
+
+export interface SyncModelsResult {
+  added: string[];
+  updated: string[];
+  existing: string[];
+  total_upstream: number;
+}
+
+export interface AccountBalanceResult {
+  account_id: number;
+  name: string;
+  balance: number;
+  status: string;
+  error: string | null;
+}
+
+export interface CheckBalancesResult {
+  results: AccountBalanceResult[];
 }

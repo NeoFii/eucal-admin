@@ -15,8 +15,10 @@ import {
   Users,
   Database,
   KeyRound,
-  Route,
+  Settings,
   Lock,
+  Layers,
+  Terminal,
 } from "lucide-react";
 import { useAuthStore } from "@/stores/auth";
 import { authApi } from "@/lib/api/auth";
@@ -56,9 +58,15 @@ const sidebarItems = [
     icon: Users,
   },
   {
-    title: "路由配置",
-    href: "/routing-config",
-    icon: Route,
+    title: "路由设置",
+    href: "/routing-settings",
+    icon: Settings,
+    requiresSuperAdmin: true,
+  },
+  {
+    title: "号池管理",
+    href: "/pools",
+    icon: Layers,
     requiresSuperAdmin: true,
   },
   {
@@ -71,6 +79,12 @@ const sidebarItems = [
     title: "管理员审计",
     href: "/admin-audit-logs",
     icon: ScrollText,
+    requiresSuperAdmin: true,
+  },
+  {
+    title: "服务日志",
+    href: "/service-logs",
+    icon: Terminal,
     requiresSuperAdmin: true,
   },
 ];
