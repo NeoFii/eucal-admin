@@ -14,6 +14,7 @@ import { usePaginatedData } from "@/hooks/use-paginated-data";
 import { userManagementApi } from "@/lib/api/user-management";
 import { getErrorDetail } from "@/lib/errors";
 import { formatShanghaiDateTime } from "@/lib/time";
+import { formatYuan } from "@/lib/pricing";
 import type { UserListItem } from "@/types";
 
 const STATUS_OPTIONS = [
@@ -26,10 +27,6 @@ const STATUS_CONFIG: Record<number, { label: string; className: string }> = {
   0: { label: "已禁用", className: "border-red-200 bg-red-50 text-red-700" },
   1: { label: "正常", className: "border-green-200 bg-green-50 text-green-700" },
 };
-
-function formatYuan(fen: number): string {
-  return `¥${(fen / 100).toFixed(2)}`;
-}
 
 export default function UsersPage() {
   const router = useRouter();

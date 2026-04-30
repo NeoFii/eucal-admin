@@ -34,6 +34,7 @@ import { toast } from "@/hooks/use-toast";
 import { userManagementApi } from "@/lib/api/user-management";
 import { getErrorDetail } from "@/lib/errors";
 import { formatShanghaiDateTime } from "@/lib/time";
+import { formatYuan, yuanToMicroYuan } from "@/lib/pricing";
 import type {
   UserDetailData,
   UserTransactionItem,
@@ -54,10 +55,6 @@ const TX_TYPE_LABELS: Record<number, string> = {
   6: "调账",
   7: "代金券",
 };
-
-function formatYuan(fen: number): string {
-  return `¥${(fen / 100).toFixed(2)}`;
-}
 
 type Tab = "transactions" | "apikeys";
 
@@ -184,14 +181,14 @@ export default function UserDetailPage() {
   };
 
   const handleTopup = async () => {
-    const amount = Number(topupAmount);
-    if (!amount || amount <= 0) {
-      toast.error("金额无效", "请输入正整数（单位：分）");
+    const microYuan = yuanToMicroYuan(topupAmount);
+    if (!microYuan || microYuan <= 0) {
+      toast.error("金额无效", "请输入正数金额（单位：元）");
       return;
     }
     try {
-      await userManagementApi.topup(uid, { amount, remark: topupRemark || undefined });
-      toast.success("充值成功", `已充值 ${formatYuan(amount)}`);
+      await userManagementApi.topup(uid, { amount: microYuan, remark: topupRemark || undefined });
+      toast.success("充值成功", `已充值 ${formatYuan(microYuan)}`);
       setTopupOpen(false);
       setTopupAmount("");
       setTopupRemark("");
@@ -203,9 +200,9 @@ export default function UserDetailPage() {
   };
 
   const handleAdjust = async () => {
-    const amount = Number(adjustAmount);
-    if (!amount) {
-      toast.error("金额无效", "请输入调账金额（单位：分，可为负数）");
+    const microYuan = yuanToMicroYuan(adjustAmount);
+    if (!microYuan) {
+      toast.error("金额无效", "请输入调账金额（单位：元，可为负数）");
       return;
     }
     if (!adjustRemark.trim()) {
@@ -213,8 +210,8 @@ export default function UserDetailPage() {
       return;
     }
     try {
-      await userManagementApi.adjustBalance(uid, { amount, remark: adjustRemark });
-      toast.success("调账成功", `已调整 ${formatYuan(amount)}`);
+      await userManagementApi.adjustBalance(uid, { amount: microYuan, remark: adjustRemark });
+      toast.success("调账成功", `已调整 ${formatYuan(microYuan)}`);
       setAdjustOpen(false);
       setAdjustAmount("");
       setAdjustRemark("");
@@ -504,12 +501,12 @@ export default function UserDetailPage() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>充值</DialogTitle>
-            <DialogDescription>为 {detail.email} 充值余额。金额单位为分。</DialogDescription>
+            <DialogDescription>为 {detail.email} 充值余额。金额单位为元。</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <Label htmlFor="topup-amount">金额（分）</Label>
-              <Input id="topup-amount" type="number" value={topupAmount} onChange={(e) => setTopupAmount(e.target.value)} placeholder="例如 10000 = ¥100.00" />
+              <Label htmlFor="topup-amount">金额（元）</Label>
+              <Input id="topup-amount" type="number" step="0.01" value={topupAmount} onChange={(e) => setTopupAmount(e.target.value)} placeholder="例如 100 = ¥100.00" />
             </div>
             <div className="space-y-2">
               <Label htmlFor="topup-remark">备注（可选）</Label>
@@ -528,12 +525,12 @@ export default function UserDetailPage() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>调账</DialogTitle>
-            <DialogDescription>为 {detail.email} 调整余额。金额单位为分，可为负数。</DialogDescription>
+            <DialogDescription>为 {detail.email} 调整余额。金额单位为元，可为负数。</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <Label htmlFor="adjust-amount">金额（分）</Label>
-              <Input id="adjust-amount" type="number" value={adjustAmount} onChange={(e) => setAdjustAmount(e.target.value)} placeholder="正数增加，负数扣减" />
+              <Label htmlFor="adjust-amount">金额（元）</Label>
+              <Input id="adjust-amount" type="number" step="0.01" value={adjustAmount} onChange={(e) => setAdjustAmount(e.target.value)} placeholder="正数增加，负数扣减" />
             </div>
             <div className="space-y-2">
               <Label htmlFor="adjust-remark">备注（必填）</Label>

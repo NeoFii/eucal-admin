@@ -36,6 +36,7 @@ import { toast } from "@/hooks/use-toast";
 import { poolsApi } from "@/lib/api/pools";
 import { getErrorDetail } from "@/lib/errors";
 import { formatShanghaiDateTime } from "@/lib/time";
+import { formatYuan, microYuanToYuan, yuanToMicroYuan } from "@/lib/pricing";
 import type {
   PoolDetail,
   PoolAccountCreate,
@@ -51,10 +52,6 @@ const STATUS_MAP: Record<string, { label: string; color: string }> = {
   exhausted: { label: "余额耗尽", color: "bg-amber-50 text-amber-700 border-amber-200" },
   error: { label: "异常", color: "bg-red-50 text-red-700 border-red-200" },
 };
-
-function formatBalance(fen: number): string {
-  return `¥${(fen / 100).toFixed(2)}`;
-}
 
 export default function PoolDetailPage() {
   const params = useParams();
@@ -107,7 +104,7 @@ export default function PoolDetailPage() {
   const openEditAccount = (a: PoolAccountItem) => {
     setEditingAccount(a);
     setAccountForm({
-      name: a.name, api_key: "", balance: String(a.balance),
+      name: a.name, api_key: "", balance: microYuanToYuan(a.balance),
       rpm_limit: a.rpm_limit != null ? String(a.rpm_limit) : "",
       tpm_limit: a.tpm_limit != null ? String(a.tpm_limit) : "",
       weight: String(a.weight), remark: a.remark ?? "",
@@ -121,7 +118,7 @@ export default function PoolDetailPage() {
         const payload: PoolAccountUpdate = {};
         if (accountForm.name) payload.name = accountForm.name;
         if (accountForm.api_key) payload.api_key = accountForm.api_key;
-        payload.balance = parseInt(accountForm.balance) || 0;
+        payload.balance = yuanToMicroYuan(accountForm.balance);
         if (accountForm.rpm_limit) payload.rpm_limit = parseInt(accountForm.rpm_limit);
         if (accountForm.tpm_limit) payload.tpm_limit = parseInt(accountForm.tpm_limit);
         payload.weight = parseInt(accountForm.weight) || 1;
@@ -168,8 +165,8 @@ export default function PoolDetailPage() {
     setEditingModel(m);
     setModelForm({
       model_slug: m.model_slug, upstream_model_id: m.upstream_model_id,
-      input_price: String(m.input_price_per_million / 100), output_price: String(m.output_price_per_million / 100),
-      cached_price: m.cached_input_price_per_million != null ? String(m.cached_input_price_per_million / 100) : "",
+      input_price: microYuanToYuan(m.input_price_per_million), output_price: microYuanToYuan(m.output_price_per_million),
+      cached_price: m.cached_input_price_per_million != null ? microYuanToYuan(m.cached_input_price_per_million) : "",
       context_length: m.context_length != null ? String(m.context_length) : "",
     });
     setModelDialogOpen(true);
@@ -180,9 +177,9 @@ export default function PoolDetailPage() {
       if (editingModel) {
         const payload: PoolModelUpdate = {
           upstream_model_id: modelForm.upstream_model_id || undefined,
-          input_price_per_million: Math.round(parseFloat(modelForm.input_price) * 100) || 0,
-          output_price_per_million: Math.round(parseFloat(modelForm.output_price) * 100) || 0,
-          cached_input_price_per_million: modelForm.cached_price ? Math.round(parseFloat(modelForm.cached_price) * 100) : undefined,
+          input_price_per_million: yuanToMicroYuan(modelForm.input_price),
+          output_price_per_million: yuanToMicroYuan(modelForm.output_price),
+          cached_input_price_per_million: modelForm.cached_price ? yuanToMicroYuan(modelForm.cached_price) : undefined,
           context_length: modelForm.context_length ? parseInt(modelForm.context_length) : undefined,
         };
         await poolsApi.updateModel(slug, editingModel.model_slug, payload);
@@ -190,9 +187,9 @@ export default function PoolDetailPage() {
       } else {
         const payload: PoolModelCreate = {
           model_slug: modelForm.model_slug, upstream_model_id: modelForm.upstream_model_id,
-          input_price_per_million: Math.round(parseFloat(modelForm.input_price) * 100) || 0,
-          output_price_per_million: Math.round(parseFloat(modelForm.output_price) * 100) || 0,
-          cached_input_price_per_million: modelForm.cached_price ? Math.round(parseFloat(modelForm.cached_price) * 100) : undefined,
+          input_price_per_million: yuanToMicroYuan(modelForm.input_price),
+          output_price_per_million: yuanToMicroYuan(modelForm.output_price),
+          cached_input_price_per_million: modelForm.cached_price ? yuanToMicroYuan(modelForm.cached_price) : undefined,
           context_length: modelForm.context_length ? parseInt(modelForm.context_length) : undefined,
         };
         await poolsApi.addModel(slug, payload);
@@ -344,7 +341,7 @@ export default function PoolDetailPage() {
                     <div className="grid grid-cols-2 gap-2">
                       <div className="rounded-lg bg-gray-50 px-3 py-2">
                         <div className="flex items-center gap-1 text-xs text-muted-foreground"><CircleDollarSign className="h-3 w-3" /> 余额</div>
-                        <div className="mt-0.5 text-sm font-semibold">{formatBalance(a.balance)}</div>
+                        <div className="mt-0.5 text-sm font-semibold">{formatYuan(a.balance)}</div>
                       </div>
                       <div className="rounded-lg bg-gray-50 px-3 py-2">
                         <div className="flex items-center gap-1 text-xs text-muted-foreground"><Zap className="h-3 w-3" /> 权重</div>
@@ -409,8 +406,8 @@ export default function PoolDetailPage() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>余额（分）</Label>
-                <Input type="number" value={accountForm.balance} onChange={(e) => setAccountForm({ ...accountForm, balance: e.target.value })} />
+                <Label>余额（元）</Label>
+                <Input type="number" step="0.01" value={accountForm.balance} onChange={(e) => setAccountForm({ ...accountForm, balance: e.target.value })} />
               </div>
               <div className="space-y-2">
                 <Label>权重</Label>
@@ -521,9 +518,9 @@ export default function PoolDetailPage() {
                         )}
                       </div>
                       <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 pl-6 text-xs text-muted-foreground">
-                        <span>输入 {(m.input_price_per_million / 100).toFixed(2)} 元/M</span>
-                        <span>输出 {(m.output_price_per_million / 100).toFixed(2)} 元/M</span>
-                        {m.cached_input_price_per_million != null && <span>缓存 {(m.cached_input_price_per_million / 100).toFixed(2)} 元/M</span>}
+                        <span>输入 {(m.input_price_per_million / 1_000_000).toFixed(2)} 元/M</span>
+                        <span>输出 {(m.output_price_per_million / 1_000_000).toFixed(2)} 元/M</span>
+                        {m.cached_input_price_per_million != null && <span>缓存 {(m.cached_input_price_per_million / 1_000_000).toFixed(2)} 元/M</span>}
                         {m.context_length != null && <span>上下文 {m.context_length.toLocaleString()}</span>}
                       </div>
                     </div>

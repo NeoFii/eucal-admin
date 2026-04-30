@@ -31,6 +31,7 @@ import {
 } from "@/lib/voucher-status";
 import { toast } from "@/hooks/use-toast";
 import type { VoucherCode, CreatedVoucherCode } from "@/types";
+import { formatYuan, yuanToMicroYuan } from "@/lib/pricing";
 import {
   Plus,
   RefreshCw,
@@ -45,10 +46,6 @@ import {
   CopyCheck,
   Eye,
 } from "lucide-react";
-
-function formatFenToYuan(fen: number): string {
-  return (fen / 100).toFixed(2);
-}
 
 function formatDateTime(value: string | null | undefined): string {
   return formatShanghaiDateTime(value);
@@ -81,7 +78,7 @@ export default function VouchersPage() {
   const [statusFilter, setStatusFilter] = useState<number | undefined>(undefined);
 
   // Generate form state
-  const [genAmount, setGenAmount] = useState(100);
+  const [genAmount, setGenAmount] = useState("1.00");
   const [genCount, setGenCount] = useState(1);
   const [genStartsAt, setGenStartsAt] = useState(getDefaultStartsAt);
   const [genExpiresAt, setGenExpiresAt] = useState(getDefaultExpiresAt);
@@ -96,7 +93,7 @@ export default function VouchersPage() {
     setGenerating(true);
     try {
       const created = await voucherApi.generate({
-        amount: genAmount,
+        amount: yuanToMicroYuan(genAmount),
         count: genCount,
         starts_at: toShanghaiApiDateTime(genStartsAt),
         expires_at: toShanghaiApiDateTime(genExpiresAt),
@@ -105,7 +102,7 @@ export default function VouchersPage() {
       setGeneratedCodes(created);
       setShowGeneratePanel(false);
       setShowCodesDialog(true);
-      setGenAmount(100);
+      setGenAmount("1.00");
       setGenCount(1);
       setGenStartsAt(getDefaultStartsAt());
       setGenExpiresAt(getDefaultExpiresAt());
@@ -192,7 +189,7 @@ export default function VouchersPage() {
     {
       key: "amount",
       header: "面额",
-      render: (v) => <span className="whitespace-nowrap font-medium">{formatFenToYuan(v.amount)} 元</span>,
+      render: (v) => <span className="whitespace-nowrap font-medium">{formatYuan(v.amount)} 元</span>,
     },
     {
       key: "status",
@@ -312,9 +309,8 @@ export default function VouchersPage() {
           <div className="space-y-4 py-2">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="mb-2 block text-sm font-medium">面额（分）</label>
-                <Input type="number" min={1} max={1000000} value={genAmount} onChange={(e) => setGenAmount(parseInt(e.target.value) || 1)} />
-                <p className="mt-1 text-xs text-muted-foreground">{formatFenToYuan(genAmount)} 元</p>
+                <label className="mb-2 block text-sm font-medium">面额（元）</label>
+                <Input type="number" step="0.01" min={0.01} max={10000} value={genAmount} onChange={(e) => setGenAmount(e.target.value)} />
               </div>
               <div>
                 <label className="mb-2 block text-sm font-medium">数量</label>
@@ -411,7 +407,7 @@ export default function VouchersPage() {
                         {detailCode.code_prefix}****{detailCode.code_suffix}
                       </code>
                     </p>
-                    <p>面额：{formatFenToYuan(detailCode.amount)} 元</p>
+                    <p>面额：{formatYuan(detailCode.amount)} 元</p>
                     <p className="flex items-center gap-2">
                       当前状态：
                       <span className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1 text-xs font-medium ${getVoucherStatusClass(detailCode)}`}>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -13,8 +13,9 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { parseNonNegativeIntegerInput } from "@/lib/pricing";
+import { yuanToMicroYuan, microYuanToYuan } from "@/lib/pricing";
 import type {
+  AvailableModelSlug,
   ModelCategoryItem,
   ModelVendorItem,
   SupportedModelItem,
@@ -25,6 +26,7 @@ import type {
 const emptyForm = (vendorSlug: string): SupportedModelCreate => ({
   vendor_slug: vendorSlug,
   slug: "",
+  routing_slug: "",
   name: "",
   summary: "",
   description: "",
@@ -39,6 +41,11 @@ const emptyForm = (vendorSlug: string): SupportedModelCreate => ({
   category_keys: [],
 });
 
+interface PriceFormState {
+  input: string;
+  output: string;
+}
+
 interface ModelFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -47,6 +54,7 @@ interface ModelFormDialogProps {
   model?: SupportedModelItem | null;
   saving?: boolean;
   onSubmit: (data: SupportedModelCreate | SupportedModelUpdate) => Promise<void> | void;
+  availableModels?: AvailableModelSlug[];
 }
 
 export function ModelFormDialog({
@@ -57,10 +65,25 @@ export function ModelFormDialog({
   model,
   saving = false,
   onSubmit,
+  availableModels = [],
 }: ModelFormDialogProps) {
   const [form, setForm] = useState<SupportedModelCreate>(emptyForm(fixedVendor.slug));
   const [tagsInput, setTagsInput] = useState("");
   const [selectedCategoryKeys, setSelectedCategoryKeys] = useState<Set<string>>(new Set());
+  const [priceForm, setPriceForm] = useState<PriceFormState>({ input: "", output: "" });
+  const [routingSlugOpen, setRoutingSlugOpen] = useState(false);
+  const routingSlugRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!routingSlugOpen) return;
+    const handleClick = (e: MouseEvent) => {
+      if (routingSlugRef.current && !routingSlugRef.current.contains(e.target as Node)) {
+        setRoutingSlugOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [routingSlugOpen]);
 
   useEffect(() => {
     if (!open) {
@@ -71,6 +94,7 @@ export function ModelFormDialog({
       setForm({
         vendor_slug: fixedVendor.slug,
         slug: model.slug,
+        routing_slug: model.routing_slug ?? "",
         name: model.name,
         summary: model.summary ?? "",
         description: model.description ?? "",
@@ -84,12 +108,17 @@ export function ModelFormDialog({
         is_active: true,
         category_keys: model.categories.map((c) => c.key),
       });
+      setPriceForm({
+        input: model.price_input_per_m_fen != null ? microYuanToYuan(model.price_input_per_m_fen) : "",
+        output: model.price_output_per_m_fen != null ? microYuanToYuan(model.price_output_per_m_fen) : "",
+      });
       setTagsInput(model.capability_tags.join(", "));
       setSelectedCategoryKeys(new Set(model.categories.map((c) => c.key)));
       return;
     }
 
     setForm(emptyForm(fixedVendor.slug));
+    setPriceForm({ input: "", output: "" });
     setTagsInput("");
     setSelectedCategoryKeys(new Set());
   }, [fixedVendor.slug, model, open]);
@@ -111,9 +140,12 @@ export function ModelFormDialog({
       ...form,
       vendor_slug: fixedVendor.slug,
       slug: form.slug.trim(),
+      routing_slug: form.routing_slug?.trim() || null,
       name: form.name.trim(),
       summary: form.summary?.trim() || undefined,
       description: form.description?.trim() || undefined,
+      price_input_per_m_fen: priceForm.input ? yuanToMicroYuan(priceForm.input) : undefined,
+      price_output_per_m_fen: priceForm.output ? yuanToMicroYuan(priceForm.output) : undefined,
       capability_tags: tagsInput
         .split(",")
         .map((tag) => tag.trim())
@@ -122,19 +154,6 @@ export function ModelFormDialog({
     };
 
     await onSubmit(payload);
-  };
-
-  const updateIntegerFen = (
-    field: "price_input_per_m_fen" | "price_output_per_m_fen",
-    value: string,
-  ) => {
-    if (value !== "" && !/^\d+$/.test(value)) {
-      return;
-    }
-    setForm((current) => ({
-      ...current,
-      [field]: parseNonNegativeIntegerInput(value),
-    }));
   };
 
   return (
@@ -189,6 +208,51 @@ export function ModelFormDialog({
             </div>
           </div>
 
+          <div ref={routingSlugRef} className="relative">
+            <label className="mb-1 block text-sm font-medium text-foreground">
+              路由标识
+              <span className="ml-1 font-normal text-muted-foreground">对应号池中的模型名称，用于计费映射</span>
+            </label>
+            <Input
+              value={form.routing_slug ?? ""}
+              onChange={(event) => {
+                setForm((current) => ({ ...current, routing_slug: event.target.value }));
+                setRoutingSlugOpen(true);
+              }}
+              onFocus={() => setRoutingSlugOpen(true)}
+              placeholder="输入或选择号池模型名称"
+              autoComplete="off"
+            />
+            {routingSlugOpen && availableModels.length > 0 && (() => {
+              const query = (form.routing_slug ?? "").toLowerCase();
+              const filtered = availableModels.filter((m) =>
+                m.model_slug.toLowerCase().includes(query)
+              );
+              if (filtered.length === 0) return null;
+              return (
+                <div
+                  className="absolute z-50 mt-1 max-h-48 w-full overflow-y-auto rounded-lg border border-border bg-background shadow-lg"
+                  onMouseDown={(e) => e.preventDefault()}
+                >
+                  {filtered.map((m) => (
+                    <button
+                      key={m.model_slug}
+                      type="button"
+                      className="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-secondary"
+                      onClick={() => {
+                        setForm((current) => ({ ...current, routing_slug: m.model_slug }));
+                        setRoutingSlugOpen(false);
+                      }}
+                    >
+                      <span className="font-medium">{m.model_slug}</span>
+                      <span className="ml-2 truncate text-xs text-muted-foreground">{m.pool_names.join(", ")}</span>
+                    </button>
+                  ))}
+                </div>
+              );
+            })()}
+          </div>
+
           <div>
             <label className="mb-1 block text-sm font-medium text-foreground">描述</label>
             <Textarea
@@ -219,25 +283,25 @@ export function ModelFormDialog({
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label className="mb-1 block text-sm font-medium text-foreground">输入价格(分/百万token)</label>
+              <label className="mb-1 block text-sm font-medium text-foreground">输入价格(元/百万token)</label>
               <Input
-                type="text"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                value={form.price_input_per_m_fen ?? ""}
-                onChange={(event) => updateIntegerFen("price_input_per_m_fen", event.target.value)}
-                placeholder="例如：1500"
+                type="number"
+                step="0.01"
+                min="0"
+                value={priceForm.input}
+                onChange={(event) => setPriceForm((c) => ({ ...c, input: event.target.value }))}
+                placeholder="例如：1.50"
               />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-foreground">输出价格(分/百万token)</label>
+              <label className="mb-1 block text-sm font-medium text-foreground">输出价格(元/百万token)</label>
               <Input
-                type="text"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                value={form.price_output_per_m_fen ?? ""}
-                onChange={(event) => updateIntegerFen("price_output_per_m_fen", event.target.value)}
-                placeholder="例如：6000"
+                type="number"
+                step="0.01"
+                min="0"
+                value={priceForm.output}
+                onChange={(event) => setPriceForm((c) => ({ ...c, output: event.target.value }))}
+                placeholder="例如：6.00"
               />
             </div>
           </div>

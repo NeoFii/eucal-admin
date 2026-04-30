@@ -34,7 +34,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { getErrorDetail } from "@/lib/errors";
-import { formatShanghaiDateTime } from "@/lib/time";
+
 
 const sidebarItems = [
   {
@@ -170,18 +170,6 @@ export default function DashboardLayout({
     return pathname.startsWith(href);
   };
 
-  const currentTitle = sidebarItems.find((item) => isActive(item.href))?.title ?? "管理后台";
-  const isDashboard = pathname === "/";
-  const now = new Date();
-  const dashboardDateLabel = new Intl.DateTimeFormat("zh-CN", {
-    timeZone: "Asia/Shanghai",
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  }).format(now);
-  const dashboardTimeLabel = `最后更新：${formatShanghaiDateTime(now)} · ${dashboardDateLabel}`;
-
   const roleLabel = isSuperAdmin ? "超级管理员" : "管理员";
 
   if (!authReady) {
@@ -251,26 +239,9 @@ export default function DashboardLayout({
       </aside>
 
       <div className="relative lg:pl-[272px]">
-        <header className="sticky top-0 z-30 px-4 pt-4 sm:px-6 lg:px-8">
-          <div className="rounded-2xl bg-white px-4 ring-1 ring-inset ring-gray-100 sm:px-6">
-            <div className="flex h-16 items-center justify-between">
-              <div className="min-w-0">
-                <div className="flex items-center gap-2 whitespace-nowrap text-xs text-muted-foreground">
-                  <span className="shrink-0">Eucal AI 控制台</span>
-                  <span className="shrink-0 text-border">/</span>
-                  <span className="shrink-0 text-sm font-semibold text-foreground">{currentTitle}</span>
-                  {isDashboard ? <span className="min-w-0 truncate">{dashboardTimeLabel}</span> : null}
-                </div>
-              </div>
-              <Button variant="outline" size="sm" onClick={handleLogout} className="lg:hidden">
-                <LogOut className="mr-1.5 h-4 w-4" />
-                退出
-              </Button>
-            </div>
-          </div>
-
-          <div className="mt-2 rounded-2xl bg-white px-2 py-2 ring-1 ring-inset ring-gray-100 lg:hidden">
-            <nav className="flex gap-1 overflow-x-auto px-1 scrollbar-thin">
+        <header className="sticky top-0 z-30 px-4 pt-4 sm:px-6 lg:hidden">
+          <div className="rounded-2xl bg-white px-2 py-2 ring-1 ring-inset ring-gray-100">
+            <nav className="flex items-center gap-1 overflow-x-auto px-1 scrollbar-thin">
               {visibleSidebarItems.map((item) => {
                 const Icon = item.icon;
                 const active = isActive(item.href);
@@ -290,6 +261,9 @@ export default function DashboardLayout({
                   </Link>
                 );
               })}
+              <Button variant="ghost" size="sm" onClick={handleLogout} className="ml-auto shrink-0">
+                <LogOut className="h-3.5 w-3.5" />
+              </Button>
             </nav>
           </div>
         </header>

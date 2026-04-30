@@ -180,6 +180,7 @@ export interface ModelCategoryUpdate {
 export interface SupportedModelItem {
   id: number;
   slug: string;
+  routing_slug: string | null;
   name: string;
   summary: string | null;
   description: string | null;
@@ -201,6 +202,7 @@ export interface SupportedModelDetail extends SupportedModelItem {
 
 export interface SupportedModelCreate {
   slug: string;
+  routing_slug?: string | null;
   name: string;
   vendor_slug: string;
   summary?: string | null;
@@ -219,6 +221,7 @@ export interface SupportedModelCreate {
 
 export interface SupportedModelUpdate {
   name?: string;
+  routing_slug?: string | null;
   vendor_slug?: string;
   summary?: string | null;
   description?: string | null;
@@ -542,4 +545,46 @@ export interface CheckBalancesResult {
 export interface AvailableModelSlug {
   model_slug: string;
   pool_names: string[];
+}
+
+// ── 仪表盘 ──────────────────────────────────────────────
+
+export interface DashboardSummary {
+  total_users: number;
+  new_users_today: number;
+  total_requests: number;
+  requests_today: number;
+  total_revenue: number;
+  revenue_today: number;
+  total_provider_cost: number;
+  provider_cost_today: number;
+}
+
+export interface UserGrowthPoint {
+  date: string;
+  new_users: number;
+  cumulative: number;
+}
+
+export interface DailyUsageTrend {
+  date: string;
+  request_count: number;
+  success_count: number;
+  error_count: number;
+  prompt_tokens: number;
+  completion_tokens: number;
+  total_revenue: number;
+  total_provider_cost: number;
+}
+
+export interface ModelCallStat {
+  model: string;
+  request_count: number;
+  total_revenue: number;
+  total_provider_cost: number;
+}
+
+export interface UsageTrendsData {
+  daily: DailyUsageTrend[];
+  by_model: ModelCallStat[];
 }
