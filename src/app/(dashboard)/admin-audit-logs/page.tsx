@@ -38,6 +38,7 @@ const AUDIT_GOVERNANCE_ACTION_OPTIONS = [
   { value: "enable_admin", label: "启用管理员" },
   { value: "disable_admin", label: "禁用管理员" },
   { value: "reset_admin_password", label: "重置密码" },
+  { value: "update_admin_role", label: "修改管理员角色" },
 ];
 
 const AUDIT_AUTH_ACTION_OPTIONS = [
@@ -91,6 +92,7 @@ const AUDIT_ACTION_LABELS: Record<string, string> = {
   enable_admin: "启用管理员",
   disable_admin: "禁用管理员",
   reset_admin_password: "重置密码",
+  update_admin_role: "修改管理员角色",
   admin_login_success: "管理员登录成功",
   admin_login_failed: "管理员登录失败",
   admin_login_locked: "管理员账号锁定",
@@ -233,9 +235,6 @@ export default function AdminAuditLogsPage() {
                 {AUDIT_CATEGORY_LABELS[logCategory]}
               </span>
             </div>
-            <span className="text-sm text-muted-foreground">
-              {log.resource_type}{log.resource_id ? ` / ${log.resource_id}` : ""}
-            </span>
           </div>
         );
       },
@@ -244,24 +243,8 @@ export default function AdminAuditLogsPage() {
       key: "actor",
       header: "操作人",
       render: (log) => (
-        <div className="flex flex-col gap-1">
-          <span className="font-medium text-foreground">{log.actor_admin.name}</span>
-          <span className="text-sm text-muted-foreground">UID {log.actor_admin.uid} · {log.actor_admin.email}</span>
-        </div>
+        <span className="font-medium text-foreground">{log.actor_admin.name}</span>
       ),
-    },
-    {
-      key: "target",
-      header: "目标管理员",
-      render: (log) =>
-        log.target_admin ? (
-          <div className="flex flex-col gap-1">
-            <span className="font-medium text-foreground">{log.target_admin.name}</span>
-            <span className="text-sm text-muted-foreground">UID {log.target_admin.uid} · {log.target_admin.email}</span>
-          </div>
-        ) : (
-          <span className="text-muted-foreground">-</span>
-        ),
     },
     {
       key: "status",
@@ -343,20 +326,6 @@ export default function AdminAuditLogsPage() {
 
   const actionOptions = useMemo(() => getAuditActionOptions(category), [category]);
 
-  const activeFilterSummary = useMemo(() => {
-    const filters = [`分类：${AUDIT_CATEGORY_LABELS[category]}`];
-    if (action) {
-      filters.push(`动作：${AUDIT_ACTION_LABELS[action] ?? action}`);
-    }
-    if (actorUid !== undefined) {
-      filters.push(`操作人 UID：${actorUid}`);
-    }
-    if (targetUid !== undefined) {
-      filters.push(`目标 UID：${targetUid}`);
-    }
-    return filters.join(" · ");
-  }, [action, actorUid, category, targetUid]);
-
   const handleCategoryChange = (nextCategory: AdminAuditCategory) => {
     const nextAction = isAuditActionAllowed(nextCategory, action) ? action : "";
     setCategory(nextCategory);
@@ -426,23 +395,17 @@ export default function AdminAuditLogsPage() {
 
       <Card className="panel">
         <CardContent className="space-y-4 p-5">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <p className="text-sm font-medium text-foreground">审计视图</p>
-              <p className="mt-1 text-sm text-muted-foreground">默认聚焦治理动作，避免登录类高频事件淹没关键治理记录。</p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {AUDIT_CATEGORY_OPTIONS.map((option) => (
-                <Button
-                  key={option.value}
-                  size="sm"
-                  variant={category === option.value ? "default" : "outline"}
-                  onClick={() => handleCategoryChange(option.value)}
-                >
-                  {option.label}
-                </Button>
-              ))}
-            </div>
+          <div className="flex flex-wrap gap-2">
+            {AUDIT_CATEGORY_OPTIONS.map((option) => (
+              <Button
+                key={option.value}
+                size="sm"
+                variant={category === option.value ? "default" : "outline"}
+                onClick={() => handleCategoryChange(option.value)}
+              >
+                {option.label}
+              </Button>
+            ))}
           </div>
 
           <div className="grid gap-4 lg:grid-cols-[1.2fr_1fr_1fr_auto_auto] lg:items-end">
@@ -495,10 +458,6 @@ export default function AdminAuditLogsPage() {
         </CardContent>
       </Card>
 
-      <div className="rounded-2xl border border-gray-200 bg-gray-100 px-4 py-3 text-sm text-gray-700">
-        当前筛选：{activeFilterSummary}
-      </div>
-
       <Card className="table-shell">
         <div className="overflow-hidden">
           <DataTable
@@ -548,10 +507,18 @@ export default function AdminAuditLogsPage() {
                     <p>
                       操作人：{detailLog.actor_admin.name} / UID {detailLog.actor_admin.uid}
                     </p>
+                    <p>操作人邮箱：{detailLog.actor_admin.email}</p>
+                    <p>操作人角色：{detailLog.actor_admin.role === "super_admin" ? "超级管理员" : "管理员"}</p>
                     <p>
                       目标管理员：
                       {detailLog.target_admin ? `${detailLog.target_admin.name} / UID ${detailLog.target_admin.uid}` : "-"}
                     </p>
+                    {detailLog.target_admin ? (
+                      <>
+                        <p>目标邮箱：{detailLog.target_admin.email}</p>
+                        <p>目标角色：{detailLog.target_admin.role === "super_admin" ? "超级管理员" : "管理员"}</p>
+                      </>
+                    ) : null}
                     <p>来源 IP：{detailLog.ip_address || "-"}</p>
                     <p>原因：{detailLog.reason || "-"}</p>
                   </div>

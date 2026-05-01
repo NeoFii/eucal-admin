@@ -217,21 +217,21 @@ export default function DashboardLayout({
           })}
         </nav>
 
-        <div className="mt-4 rounded-2xl border border-gray-200 bg-white p-4">
-          <div className="mb-3 rounded-xl border border-gray-200 bg-gray-50 p-3">
+        <div className="mt-4 rounded-2xl border border-gray-200 bg-white p-3">
+          <div className="mb-2 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5">
             <p className="truncate text-sm font-medium text-foreground">{user?.name ?? "管理员"}</p>
             <p className="truncate text-xs text-muted-foreground">{user?.email}</p>
-            <p className="mt-2 inline-flex items-center whitespace-nowrap rounded-full border border-gray-200 bg-gray-100 px-2 py-1 text-[11px] font-medium text-gray-700">
+            <p className="mt-1.5 inline-flex items-center whitespace-nowrap rounded-full border border-gray-200 bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-700">
               {roleLabel}
             </p>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => setPwdDialogOpen(true)} className="flex-1 justify-start">
-              <Lock className="mr-2 h-4 w-4" />
+          <div className="flex flex-col gap-1.5">
+            <Button variant="ghost" size="sm" onClick={() => setPwdDialogOpen(true)} className="w-full justify-start text-muted-foreground hover:text-foreground">
+              <Lock className="mr-2 h-3.5 w-3.5" />
               修改密码
             </Button>
-            <Button variant="outline" onClick={handleLogout} className="flex-1 justify-start">
-              <LogOut className="mr-2 h-4 w-4" />
+            <Button variant="ghost" size="sm" onClick={handleLogout} className="w-full justify-start text-muted-foreground hover:text-foreground">
+              <LogOut className="mr-2 h-3.5 w-3.5" />
               退出登录
             </Button>
           </div>

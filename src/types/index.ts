@@ -12,6 +12,7 @@ export interface AdminUserInfo {
   email: string;
   name: string;
   role: AdminRole;
+  is_root: boolean;
   status: number;
   last_login_at: string | null;
   created_at: string;
@@ -22,6 +23,7 @@ export interface AdminListItem {
   email: string;
   name: string;
   role: AdminRole;
+  is_root: boolean;
   status: number;
   last_login_at: string | null;
   created_at: string;
@@ -39,6 +41,7 @@ export interface CreateAdminRequest {
   email: string;
   name: string;
   password: string;
+  role?: AdminRole;
 }
 
 export interface CreateAdminResponseData {
@@ -57,6 +60,10 @@ export interface UpdateAdminStatusRequest {
 
 export interface ResetAdminPasswordRequest {
   new_password: string;
+}
+
+export interface UpdateAdminRoleRequest {
+  role: AdminRole;
 }
 
 export interface ChangePasswordRequest {

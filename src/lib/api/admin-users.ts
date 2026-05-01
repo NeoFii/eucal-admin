@@ -4,6 +4,7 @@ import type {
   CreateAdminRequest,
   CreateAdminResponseData,
   ResetAdminPasswordRequest,
+  UpdateAdminRoleRequest,
   UpdateAdminStatusRequest,
 } from "@/types";
 
@@ -39,5 +40,9 @@ export const adminUsersApi = {
 
   resetPassword: async (uid: string, payload: ResetAdminPasswordRequest): Promise<void> => {
     await apiClient.post(`/api/v1/admin-users/${uid}/reset-password`, payload);
+  },
+
+  updateRole: async (uid: string, payload: UpdateAdminRoleRequest): Promise<void> => {
+    await apiClient.patch(`/api/v1/admin-users/${uid}/role`, payload);
   },
 };

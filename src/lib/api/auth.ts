@@ -8,6 +8,7 @@ interface LoginData {
     email: string;
     name: string;
     role: string;
+    is_root: boolean;
   };
   access_token: string;
   expires_in: number;

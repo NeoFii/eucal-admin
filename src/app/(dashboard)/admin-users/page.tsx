@@ -36,7 +36,7 @@ import { adminUsersApi } from "@/lib/api/admin-users";
 import { formatShanghaiDateTime } from "@/lib/time";
 import { useAuthStore } from "@/stores/auth";
 import { getErrorDetail } from "@/lib/errors";
-import type { AdminListItem, CreateAdminRequest } from "@/types";
+import type { AdminListItem, AdminRole, CreateAdminRequest } from "@/types";
 
 const ROLE_CONFIG = {
   super_admin: {
@@ -47,6 +47,11 @@ const ROLE_CONFIG = {
     label: "管理员",
     className: "border-border bg-secondary text-secondary-foreground",
   },
+} as const;
+
+const ROOT_BADGE = {
+  label: "根管理员",
+  className: "border-amber-300 bg-amber-100 text-amber-700",
 } as const;
 
 const STATUS_CONFIG = {
@@ -64,12 +69,14 @@ const EMPTY_CREATE_FORM: CreateAdminRequest = {
   email: "",
   name: "",
   password: "",
+  role: "admin",
 };
 
 export default function AdminUsersPage() {
   const user = useAuthStore((state) => state.user);
   const [mounted, setMounted] = useState(false);
   const isSuperAdmin = user?.role === "super_admin";
+  const isRoot = user?.is_root === true;
 
   const { items: admins, total, page, loading, setPage, refresh } = usePaginatedData<AdminListItem>(
     (params) => {
@@ -92,6 +99,8 @@ export default function AdminUsersPage() {
   const [resetTarget, setResetTarget] = useState<AdminListItem | null>(null);
   const [newPassword, setNewPassword] = useState("");
 
+  const [roleTarget, setRoleTarget] = useState<{ admin: AdminListItem; nextRole: AdminRole } | null>(null);
+
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -108,6 +117,7 @@ export default function AdminUsersPage() {
         email: createForm.email.trim(),
         name: createForm.name.trim(),
         password: createForm.password,
+        role: createForm.role,
       });
       toast.success("创建成功", `管理员 ${created.name} 已创建`);
       setCreateForm(EMPTY_CREATE_FORM);
@@ -155,6 +165,21 @@ export default function AdminUsersPage() {
     }
   };
 
+  const handleUpdateRole = async () => {
+    if (!roleTarget) return;
+    try {
+      await adminUsersApi.updateRole(roleTarget.admin.uid, { role: roleTarget.nextRole });
+      toast.success(
+        "角色已更新",
+        `${roleTarget.admin.name} 的角色已变更为${ROLE_CONFIG[roleTarget.nextRole].label}`,
+      );
+      setRoleTarget(null);
+      await refresh();
+    } catch (error) {
+      toast.error("角色更新失败", getErrorDetail(error, "请稍后重试"));
+    }
+  };
+
   const columns = useMemo<Column<AdminListItem>[]>(() => [
     {
       key: "name",
@@ -181,10 +206,10 @@ export default function AdminUsersPage() {
       headerClassName: "px-6 py-4 text-center text-sm font-semibold",
       className: "px-6 py-4 text-center",
       render: (admin) => {
-        const role = ROLE_CONFIG[admin.role];
+        const badge = admin.is_root ? ROOT_BADGE : ROLE_CONFIG[admin.role];
         return (
-          <span className={`inline-flex items-center whitespace-nowrap rounded-full border px-3 py-1 text-xs font-medium ${role.className}`}>
-            {role.label}
+          <span className={`inline-flex items-center whitespace-nowrap rounded-full border px-3 py-1 text-xs font-medium ${badge.className}`}>
+            {badge.label}
           </span>
         );
       },
@@ -224,8 +249,8 @@ export default function AdminUsersPage() {
       headerClassName: "px-6 py-4 text-center text-sm font-semibold",
       className: "px-6 py-4 text-center",
       render: (admin) => {
-        if (admin.role === "super_admin") {
-          return <span className="text-sm text-muted-foreground">系统治理账号</span>;
+        if (admin.is_root) {
+          return <span className="text-sm text-muted-foreground">根管理员</span>;
         }
         return (
           <div className="flex items-center justify-center gap-2">
@@ -240,6 +265,21 @@ export default function AdminUsersPage() {
               <KeyRound className="mr-1 h-3.5 w-3.5" />
               重置密码
             </Button>
+            {isRoot && admin.uid !== user?.uid ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  setRoleTarget({
+                    admin,
+                    nextRole: admin.role === "admin" ? "super_admin" : "admin",
+                  })
+                }
+              >
+                <Shield className="mr-1 h-3.5 w-3.5" />
+                修改角色
+              </Button>
+            ) : null}
             <Button
               variant="outline"
               size="sm"
@@ -271,7 +311,7 @@ export default function AdminUsersPage() {
         );
       },
     },
-  ], [user?.uid]);
+  ], [user?.uid, isRoot]);
 
   if (!mounted) {
     return (
@@ -367,8 +407,8 @@ export default function AdminUsersPage() {
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>创建普通管理员</DialogTitle>
-            <DialogDescription>新建账号默认角色为 admin，创建后可立即登录后台。</DialogDescription>
+            <DialogTitle>创建管理员</DialogTitle>
+            <DialogDescription>填写账号信息并选择角色，创建后可立即登录后台。</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
@@ -401,6 +441,23 @@ export default function AdminUsersPage() {
               />
               <p className="text-xs text-muted-foreground">密码规则由后端统一校验，建议包含大小写字母、数字和特殊字符。</p>
             </div>
+            {isRoot ? (
+              <div className="space-y-2">
+                <Label htmlFor="admin-role">角色</Label>
+                <select
+                  id="admin-role"
+                  value={createForm.role ?? "admin"}
+                  onChange={(event) =>
+                    setCreateForm((prev) => ({ ...prev, role: event.target.value as AdminRole }))
+                  }
+                  className="flex h-10 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm text-foreground outline-none ring-offset-background transition-all duration-200 focus-visible:ring-2 focus-visible:ring-gray-950/10"
+                >
+                  <option value="admin">管理员</option>
+                  <option value="super_admin">超级管理员</option>
+                </select>
+                <p className="text-xs text-muted-foreground">超级管理员拥有全部页面访问权限。</p>
+              </div>
+            ) : null}
           </div>
           <DialogFooter>
             <Button
@@ -465,6 +522,33 @@ export default function AdminUsersPage() {
             placeholder="请输入新密码"
           />
           <p className="text-xs text-muted-foreground">该操作会触发后端审计，但不会展示或保存明文密码。</p>
+        </div>
+      </ConfirmDialog>
+
+      {/* Role change confirmation */}
+      <ConfirmDialog
+        open={!!roleTarget}
+        onOpenChange={(open) => !open && setRoleTarget(null)}
+        title="修改管理员角色"
+        description={`确认将 ${roleTarget?.admin.name ?? "该管理员"} 的角色变更为${roleTarget ? ROLE_CONFIG[roleTarget.nextRole].label : ""}？`}
+        confirmLabel="确认变更"
+        onConfirm={handleUpdateRole}
+      >
+        <div className="flex items-start gap-3 rounded-xl bg-amber-50 p-4">
+          <AlertTriangle className="mt-0.5 h-5 w-5 text-amber-500" />
+          <div>
+            <p className="font-medium text-foreground">{roleTarget?.admin.name}</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              当前角色：{roleTarget ? ROLE_CONFIG[roleTarget.admin.role].label : ""}
+              {" → "}
+              变更为：{roleTarget ? ROLE_CONFIG[roleTarget.nextRole].label : ""}
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {roleTarget?.nextRole === "super_admin"
+                ? "提升为超级管理员后，该账号将拥有全部治理页面访问权限。"
+                : "降级为普通管理员后，该账号将失去治理页面访问权限。"}
+            </p>
+          </div>
         </div>
       </ConfirmDialog>
     </div>
