@@ -595,3 +595,43 @@ export interface UsageTrendsData {
   daily: DailyUsageTrend[];
   by_model: ModelCallStat[];
 }
+
+// ── 用户用量分析 ──────────────────────────────────────────
+
+export type UsageAnalyticsRange = "8h" | "24h" | "7d" | "30d";
+
+export interface UsageAnalyticsOverview {
+  total_requests: number;
+  success_requests: number;
+  success_rate: number;
+  total_cost: number;
+}
+
+export interface UsageAnalyticsModel {
+  effective_model: string;
+  request_count: number;
+  request_share: number;
+  total_cost: number;
+}
+
+export interface UsageAnalyticsBucketCost {
+  effective_model: string;
+  total_cost: number;
+}
+
+export interface UsageAnalyticsBucket {
+  bucket_start: string;
+  label: string;
+  costs: UsageAnalyticsBucketCost[];
+}
+
+export interface UsageAnalyticsData {
+  range: UsageAnalyticsRange;
+  granularity: string;
+  start: string;
+  end: string;
+  currency: string;
+  overview: UsageAnalyticsOverview;
+  models: UsageAnalyticsModel[];
+  buckets: UsageAnalyticsBucket[];
+}

@@ -17,31 +17,54 @@ import {
   Activity,
   DollarSign,
   TrendingUp,
+  ArrowUpRight,
+  ArrowDownRight,
   type LucideIcon,
 } from "lucide-react";
+
+type StatGradient = "blue" | "green" | "purple" | "amber";
+type StatTrend = "up" | "down" | "neutral";
+
+const GRADIENT_CLASSES: Record<StatGradient, { card: string; icon: string }> = {
+  blue: { card: "stat-gradient-blue", icon: "bg-blue-100 text-blue-600" },
+  green: { card: "stat-gradient-green", icon: "bg-emerald-100 text-emerald-600" },
+  purple: { card: "stat-gradient-purple", icon: "bg-purple-100 text-purple-600" },
+  amber: { card: "stat-gradient-amber", icon: "bg-amber-100 text-amber-600" },
+};
 
 function StatCard({
   icon: Icon,
   title,
   value,
   sub,
+  gradient = "blue",
+  trend = "neutral",
+  delay = 0,
 }: {
   icon: LucideIcon;
   title: string;
   value: string;
   sub: string;
+  gradient?: StatGradient;
+  trend?: StatTrend;
+  delay?: number;
 }) {
+  const g = GRADIENT_CLASSES[gradient];
   return (
-    <Card className="panel">
+    <Card className={`panel animate-slide-up ${g.card}`} style={{ animationDelay: `${delay}ms` }}>
       <CardContent className="flex items-center gap-4 p-5">
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gray-100">
-          <Icon className="h-5 w-5 text-gray-600" />
+        <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${g.icon}`}>
+          <Icon className="h-5 w-5" />
         </div>
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <p className="text-sm text-muted-foreground">{title}</p>
-          <p className="mt-0.5 text-xl font-semibold text-foreground truncate">
-            {value}
-          </p>
+          <div className="mt-0.5 flex items-baseline gap-2">
+            <p className="text-xl font-semibold tabular-nums text-foreground truncate">
+              {value}
+            </p>
+            {trend === "up" && <ArrowUpRight className="h-4 w-4 text-emerald-500" />}
+            {trend === "down" && <ArrowDownRight className="h-4 w-4 text-red-500" />}
+          </div>
           <p className="mt-0.5 text-xs text-muted-foreground">{sub}</p>
         </div>
       </CardContent>
@@ -114,28 +137,40 @@ export default function DashboardPage() {
           title="总用户数"
           value={s?.total_users?.toLocaleString() ?? "—"}
           sub={s ? `今日新增 ${s.new_users_today}` : ""}
+          gradient="blue"
+          trend={s && s.new_users_today > 0 ? "up" : "neutral"}
+          delay={0}
         />
         <StatCard
           icon={Activity}
           title="总调用次数"
           value={s?.total_requests?.toLocaleString() ?? "—"}
           sub={s ? `今日 ${s.requests_today.toLocaleString()}` : ""}
+          gradient="green"
+          trend={s && s.requests_today > 0 ? "up" : "neutral"}
+          delay={100}
         />
         <StatCard
           icon={DollarSign}
           title="总收入"
           value={s ? formatYuan(s.total_revenue) : "—"}
           sub={s ? `今日 ${formatYuan(s.revenue_today)}` : ""}
+          gradient="purple"
+          trend={s && s.revenue_today > 0 ? "up" : "neutral"}
+          delay={200}
         />
         <StatCard
           icon={TrendingUp}
           title="总利润"
           value={s ? formatYuan(profit) : "—"}
           sub={s ? `今日 ${formatYuan(profitToday)}` : ""}
+          gradient="amber"
+          trend={s ? (profitToday > 0 ? "up" : profitToday < 0 ? "down" : "neutral") : "neutral"}
+          delay={300}
         />
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-2">
+      <div className="animate-fade-in grid gap-5 lg:grid-cols-2">
         <ChartCard
           title="用户增长"
           tabs={[

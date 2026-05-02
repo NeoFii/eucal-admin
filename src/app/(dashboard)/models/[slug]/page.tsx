@@ -17,7 +17,17 @@ import type {
 } from "@/types";
 import { toast } from "@/hooks/use-toast";
 import { getErrorDetail } from "@/lib/errors";
-import { ArrowLeft, Edit3, RefreshCw, Trash2 } from "lucide-react";
+import {
+  ArrowDownToLine,
+  ArrowLeft,
+  ArrowUpFromLine,
+  Edit3,
+  Layers,
+  MessageSquare,
+  RefreshCw,
+  Route,
+  Trash2,
+} from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { mapCapabilityTags } from "@/lib/model-capabilities";
@@ -137,67 +147,82 @@ export default function ModelDetailPage() {
       </div>
 
       {/* 头部：Logo + 名称 + 标签 + 摘要 */}
-      <div className="panel p-6">
-        <div className="flex items-center gap-4 mb-4">
-          {model.vendor.logo_url?.startsWith("http") ? (
-            <img
-              src={model.vendor.logo_url}
-              alt={model.vendor.name}
-              className="h-12 w-12 flex-shrink-0 rounded-xl object-contain"
-            />
-          ) : (
-            <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-secondary text-lg font-semibold text-muted-foreground">
-              {model.vendor.name.charAt(0).toUpperCase()}
+      <div className="panel overflow-hidden">
+        <div className="bg-gradient-to-r from-gray-50 via-gray-100/60 to-gray-50 p-6 pb-5">
+          <div className="flex items-center gap-4 mb-4">
+            {model.vendor.logo_url?.startsWith("http") ? (
+              <img
+                src={model.vendor.logo_url}
+                alt={model.vendor.name}
+                className="h-14 w-14 flex-shrink-0 rounded-xl object-contain shadow-sm"
+              />
+            ) : (
+              <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-xl bg-white text-lg font-semibold text-gray-600 shadow-sm">
+                {model.vendor.name.charAt(0).toUpperCase()}
+              </div>
+            )}
+            <div>
+              <h1 className="text-2xl font-semibold text-foreground lg:text-3xl">
+                {model.vendor.name}
+                <span className="mx-2 text-gray-300">/</span>
+                {model.name}
+              </h1>
+              <div className="mt-1 flex items-center gap-2">
+                <span className={`inline-flex items-center gap-1.5 text-xs font-medium ${model.is_active ? "text-emerald-600" : "text-gray-500"}`}>
+                  <span className={`h-2 w-2 rounded-full ${model.is_active ? "bg-emerald-500 animate-pulse-ring" : "bg-gray-400"}`} />
+                  {model.is_active ? "已启用" : "已停用"}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {(model.categories.length > 0 || model.is_reasoning_model || capabilityTags.length > 0) && (
+            <div className="flex flex-wrap gap-2">
+              {model.categories.map((cat) => (
+                <span key={cat.key} className="rounded-full bg-blue-100 px-3 py-1 text-xs font-medium text-blue-700">
+                  {cat.name}
+                </span>
+              ))}
+              {model.is_reasoning_model && (
+                <span className="rounded-full bg-violet-100 px-3 py-1 text-xs font-medium text-violet-700">
+                  推理模型
+                </span>
+              )}
+              {capabilityTags.map((tag) => (
+                <span key={tag} className="rounded-full bg-gray-200/80 px-3 py-1 text-xs text-gray-600">
+                  {tag}
+                </span>
+              ))}
             </div>
           )}
-          <h1 className="text-2xl font-semibold text-foreground lg:text-3xl">
-            {model.vendor.name}
-            <span className="mx-2 text-gray-300">/</span>
-            {model.name}
-          </h1>
         </div>
 
-        {(model.categories.length > 0 || model.is_reasoning_model || capabilityTags.length > 0) && (
-          <div className="flex flex-wrap gap-2 mb-4">
-            {model.categories.map((cat) => (
-              <span key={cat.key} className="rounded-full bg-secondary px-3 py-1 text-xs text-muted-foreground">
-                {cat.name}
-              </span>
-            ))}
-            {model.is_reasoning_model && (
-              <span className="rounded-full bg-violet-100 px-3 py-1 text-xs text-violet-700">
-                推理模型
-              </span>
-            )}
-            {capabilityTags.map((tag) => (
-              <span key={tag} className="rounded-full bg-secondary px-3 py-1 text-xs text-muted-foreground">
-                {tag}
-              </span>
-            ))}
-          </div>
-        )}
-
         {model.summary && (
-          <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">{model.summary}</p>
+          <div className="border-l-3 border-gray-300 px-6 py-4">
+            <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">{model.summary}</p>
+          </div>
         )}
       </div>
 
       {/* 关键信息卡片 */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <div className="rounded-xl bg-secondary p-5">
-          <div className="text-xs text-muted-foreground mb-1">上下文窗口</div>
-          <div className="text-2xl font-semibold text-foreground">{formatContextWindow(model.context_window)}</div>
-          <div className="text-xs text-muted-foreground mt-1">tokens</div>
+        <div className="stat-gradient-blue relative overflow-hidden rounded-xl p-5">
+          <Layers className="absolute right-3 top-3 h-8 w-8 text-blue-200/60" />
+          <div className="text-xs font-medium text-blue-600/80 mb-1">上下文窗口</div>
+          <div className="text-3xl font-bold tabular-nums text-blue-900">{formatContextWindow(model.context_window)}</div>
+          <div className="text-xs text-blue-600/60 mt-1">tokens</div>
         </div>
-        <div className="rounded-xl bg-secondary p-5">
-          <div className="text-xs text-muted-foreground mb-1">每百万输入价格</div>
-          <div className="text-2xl font-semibold text-foreground">
+        <div className="stat-gradient-green relative overflow-hidden rounded-xl p-5">
+          <ArrowDownToLine className="absolute right-3 top-3 h-8 w-8 text-emerald-200/60" />
+          <div className="text-xs font-medium text-emerald-600/80 mb-1">每百万输入价格</div>
+          <div className="text-3xl font-bold tabular-nums text-emerald-900">
             {model.price_input_per_m_fen != null ? formatFenPerMillionTokens(model.price_input_per_m_fen) : "待配置"}
           </div>
         </div>
-        <div className="rounded-xl bg-secondary p-5">
-          <div className="text-xs text-muted-foreground mb-1">每百万输出价格</div>
-          <div className="text-2xl font-semibold text-foreground">
+        <div className="stat-gradient-purple relative overflow-hidden rounded-xl p-5">
+          <ArrowUpFromLine className="absolute right-3 top-3 h-8 w-8 text-violet-200/60" />
+          <div className="text-xs font-medium text-violet-600/80 mb-1">每百万输出价格</div>
+          <div className="text-3xl font-bold tabular-nums text-violet-900">
             {model.price_output_per_m_fen != null ? formatFenPerMillionTokens(model.price_output_per_m_fen) : "待配置"}
           </div>
         </div>
@@ -207,39 +232,37 @@ export default function ModelDetailPage() {
       {(model.max_output_tokens || model.routing_slug) && (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           {model.max_output_tokens && (
-            <div className="rounded-xl bg-secondary p-5">
-              <div className="text-xs text-muted-foreground mb-1">最大输出</div>
-              <div className="text-2xl font-semibold text-foreground">
+            <div className="stat-gradient-amber relative overflow-hidden rounded-xl p-5">
+              <MessageSquare className="absolute right-3 top-3 h-8 w-8 text-amber-200/60" />
+              <div className="text-xs font-medium text-amber-600/80 mb-1">最大输出</div>
+              <div className="text-3xl font-bold tabular-nums text-amber-900">
                 {formatContextWindow(model.max_output_tokens)}
               </div>
-              <div className="text-xs text-muted-foreground mt-1">tokens</div>
+              <div className="text-xs text-amber-600/60 mt-1">tokens</div>
             </div>
           )}
           {model.routing_slug && (
-            <div className="rounded-xl bg-secondary p-5">
-              <div className="text-xs text-muted-foreground mb-1">路由标识</div>
-              <div className="text-lg font-medium text-foreground font-mono">{model.routing_slug}</div>
+            <div className="rounded-xl bg-gray-900 p-5">
+              <div className="flex items-center gap-1.5 mb-2">
+                <Route className="h-3.5 w-3.5 text-gray-500" />
+                <span className="text-xs font-medium text-gray-500">路由标识</span>
+              </div>
+              <div className="rounded-lg bg-gray-800 px-3 py-2">
+                <code className="text-sm font-mono text-emerald-400">{model.routing_slug}</code>
+              </div>
             </div>
           )}
-          <div className="rounded-xl bg-secondary p-5">
-            <div className="text-xs text-muted-foreground mb-1">状态</div>
-            <div className="mt-1">
-              <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${model.is_active ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600"}`}>
-                {model.is_active ? "已启用" : "已停用"}
-              </span>
-            </div>
-          </div>
         </div>
       )}
 
       {/* 模型描述 */}
       {model.description && (
-        <div>
-          <h2 className="text-lg font-semibold text-foreground mb-3">模型介绍</h2>
-          <div className="rounded-xl bg-secondary p-6">
-            <div className="markdown-content text-sm text-foreground">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>{model.description}</ReactMarkdown>
-            </div>
+        <div className="panel p-6">
+          <h2 className="mb-4 flex items-center gap-2 border-b border-gray-100 pb-3 text-sm font-semibold text-foreground">
+            模型介绍
+          </h2>
+          <div className="markdown-content text-sm text-foreground">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>{model.description}</ReactMarkdown>
           </div>
         </div>
       )}

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import {
   ChevronDown,
   ChevronRight,
@@ -50,11 +50,26 @@ const LEVEL_COLORS: Record<string, string> = {
   CRITICAL: "text-red-800 font-bold",
 };
 
+const LEVEL_BADGE_CLASSES: Record<string, string> = {
+  DEBUG: "log-badge log-badge-debug",
+  INFO: "log-badge log-badge-info",
+  WARNING: "log-badge log-badge-warning",
+  ERROR: "log-badge log-badge-error",
+  CRITICAL: "log-badge log-badge-critical",
+};
+
 const SERVICE_DOT_COLORS: Record<string, string> = {
   "admin-service": "bg-violet-500",
   "user-service": "bg-blue-500",
   "router-service": "bg-emerald-500",
   "inference-service": "bg-amber-500",
+};
+
+const SERVICE_ACTIVE_CLASSES: Record<string, string> = {
+  "admin-service": "bg-violet-600 text-white shadow-sm",
+  "user-service": "bg-blue-600 text-white shadow-sm",
+  "router-service": "bg-emerald-600 text-white shadow-sm",
+  "inference-service": "bg-amber-600 text-white shadow-sm",
 };
 
 const AUTO_REFRESH_INTERVAL = 5000;
@@ -215,15 +230,16 @@ export default function ServiceLogsPage() {
               const result = serviceResults.find((r) => r.service === o.value);
               const dot = o.value ? SERVICE_DOT_COLORS[o.value] ?? "bg-gray-400" : null;
               const unreachable = result && !result.reachable;
+              const activeClass = o.value && active
+                ? SERVICE_ACTIVE_CLASSES[o.value] ?? "bg-gray-950 text-white shadow-sm"
+                : active
+                  ? "bg-gray-950 text-white shadow-sm"
+                  : "border border-gray-200 bg-white text-gray-600 hover:bg-gray-100 hover:text-gray-950";
               return (
                 <button
                   key={o.value}
                   onClick={() => { setService(o.value); setPage(1); }}
-                  className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm transition-all ${
-                    active
-                      ? "bg-gray-950 text-white shadow-sm"
-                      : "border border-gray-200 bg-white text-gray-600 hover:bg-gray-100 hover:text-gray-950"
-                  }`}
+                  className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm transition-all ${activeClass}`}
                 >
                   {dot && (
                     <span className={`h-2 w-2 rounded-full ${unreachable ? "bg-red-400" : active ? "bg-white/80" : dot}`} />
@@ -281,7 +297,22 @@ export default function ServiceLogsPage() {
 
 
       {/* Log entries */}
-      <Card className="table-shell">
+      <Card className="table-shell overflow-hidden">
+        {/* Terminal header */}
+        <div className="terminal-header">
+          <span className="terminal-dot bg-red-500" />
+          <span className="terminal-dot bg-yellow-500" />
+          <span className="terminal-dot bg-green-500" />
+          <span className="ml-2 text-xs font-medium text-gray-400">
+            {service || "all-services"} — 日志输出
+          </span>
+          {autoRefresh && (
+            <span className="ml-auto inline-flex items-center gap-1.5 text-xs text-emerald-400">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse-ring" />
+              LIVE
+            </span>
+          )}
+        </div>
         <div className="overflow-hidden">
           {loading && logs.length === 0 ? (
             <div className="flex items-center justify-center py-16 text-sm text-muted-foreground">
@@ -317,9 +348,8 @@ export default function ServiceLogsPage() {
                       ),
                     );
                     return (
-                      <>
+                      <Fragment key={rowKey}>
                         <tr
-                          key={rowKey}
                           className="table-row cursor-pointer"
                           onClick={() => toggleRow(rowKey)}
                         >
@@ -336,7 +366,7 @@ export default function ServiceLogsPage() {
                             </span>
                           </td>
                           <td className="whitespace-nowrap px-4 py-2.5">
-                            <span className={`text-xs font-semibold ${LEVEL_COLORS[entry.level] ?? "text-gray-600"}`}>
+                            <span className={LEVEL_BADGE_CLASSES[entry.level] ?? "log-badge log-badge-debug"}>
                               {entry.level}
                             </span>
                           </td>
@@ -352,47 +382,47 @@ export default function ServiceLogsPage() {
                           </td>
                         </tr>
                         {isExpanded && (
-                          <tr key={`${rowKey}-detail`} className="border-b border-gray-100 bg-gray-50/60">
+                          <tr className="border-b border-gray-800 bg-gray-950">
                             <td colSpan={5} className="px-4 py-3">
                               <div className="grid gap-3 text-xs md:grid-cols-2">
-                                <div className="space-y-1">
-                                  <p><span className="font-medium text-foreground">Logger:</span> {entry.logger}</p>
-                                  <p><span className="font-medium text-foreground">Trace ID:</span> {entry.traceId ?? "-"}</p>
-                                  <p><span className="font-medium text-foreground">Span ID:</span> {entry.spanId ?? "-"}</p>
-                                  <p><span className="font-medium text-foreground">Request ID:</span> {entry.requestId ?? "-"}</p>
-                                  {entry.uid && <p><span className="font-medium text-foreground">UID:</span> {entry.uid}</p>}
-                                  {entry.env && <p><span className="font-medium text-foreground">Env:</span> {entry.env}</p>}
-                                  {entry.durationMs != null && <p><span className="font-medium text-foreground">Duration:</span> {entry.durationMs}ms</p>}
-                                  <p><span className="font-medium text-foreground">Seq:</span> {entry.seq}</p>
+                                <div className="space-y-1 text-gray-300">
+                                  <p><span className="text-gray-500">Logger:</span> {entry.logger}</p>
+                                  <p><span className="text-gray-500">Trace ID:</span> <span className="font-mono text-cyan-400">{entry.traceId ?? "-"}</span></p>
+                                  <p><span className="text-gray-500">Span ID:</span> <span className="font-mono text-cyan-400">{entry.spanId ?? "-"}</span></p>
+                                  <p><span className="text-gray-500">Request ID:</span> <span className="font-mono text-cyan-400">{entry.requestId ?? "-"}</span></p>
+                                  {entry.uid && <p><span className="text-gray-500">UID:</span> <span className="text-amber-400">{entry.uid}</span></p>}
+                                  {entry.env && <p><span className="text-gray-500">Env:</span> {entry.env}</p>}
+                                  {entry.durationMs != null && <p><span className="text-gray-500">Duration:</span> <span className="text-green-400">{entry.durationMs}ms</span></p>}
+                                  <p><span className="text-gray-500">Seq:</span> {entry.seq}</p>
                                 </div>
                                 {Object.keys(extra).length > 0 && (
-                                  <div className="rounded-lg bg-slate-900 p-3 text-slate-100">
-                                    <pre className="overflow-x-auto whitespace-pre-wrap break-all">{JSON.stringify(extra, null, 2)}</pre>
+                                  <div className="rounded-lg bg-gray-900 p-3 text-gray-200">
+                                    <pre className="overflow-x-auto whitespace-pre-wrap break-all font-mono">{JSON.stringify(extra, null, 2)}</pre>
                                   </div>
                                 )}
                               </div>
                               {msg && (
-                                <div className="mt-3 rounded-lg border border-gray-200 bg-white p-3">
-                                  <p className="text-xs font-medium text-foreground">完整消息</p>
-                                  <p className="mt-1 whitespace-pre-wrap break-all text-xs text-muted-foreground">{msg}</p>
+                                <div className="mt-3 rounded-lg border border-gray-800 bg-gray-900 p-3">
+                                  <p className="text-xs font-medium text-gray-400">完整消息</p>
+                                  <p className="mt-1 whitespace-pre-wrap break-all font-mono text-xs text-gray-200">{msg}</p>
                                 </div>
                               )}
                               {entry.error && typeof entry.error === "object" && (
-                                <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3">
-                                  <p className="text-xs font-medium text-amber-700">错误</p>
-                                  <p className="mt-1 text-xs text-amber-600">[{entry.error.code}] {entry.error.detail}</p>
+                                <div className="mt-3 rounded-lg border border-amber-800/50 bg-amber-950/30 p-3">
+                                  <p className="text-xs font-medium text-amber-400">错误</p>
+                                  <p className="mt-1 font-mono text-xs text-amber-300">[{entry.error.code}] {entry.error.detail}</p>
                                 </div>
                               )}
                               {typeof entry.exception === "string" && entry.exception && (
-                                <div className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3">
-                                  <p className="text-xs font-medium text-red-700">异常堆栈</p>
-                                  <pre className="mt-1 overflow-x-auto whitespace-pre-wrap break-all text-xs text-red-600">{entry.exception}</pre>
+                                <div className="mt-3 rounded-lg border border-red-800/50 bg-red-950/30 p-3">
+                                  <p className="text-xs font-medium text-red-400">异常堆栈</p>
+                                  <pre className="mt-1 overflow-x-auto whitespace-pre-wrap break-all font-mono text-xs text-red-300">{entry.exception}</pre>
                                 </div>
                               )}
                             </td>
                           </tr>
                         )}
-                      </>
+                      </Fragment>
                     );
                   })}
                 </tbody>

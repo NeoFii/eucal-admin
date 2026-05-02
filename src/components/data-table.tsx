@@ -75,7 +75,7 @@ export function DataTable<T>({
             {columns.map((col) => (
               <th
                 key={col.key}
-                className={col.headerClassName ?? "whitespace-nowrap px-6 py-4 text-left text-sm font-semibold"}
+                className={col.headerClassName ?? "whitespace-nowrap px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider"}
               >
                 {col.header}
               </th>

@@ -46,11 +46,11 @@ import type {
   PoolAccountItem,
   PoolModelItem,
 } from "@/types";
-const STATUS_MAP: Record<string, { label: string; color: string }> = {
-  active: { label: "正常", color: "bg-emerald-50 text-emerald-700 border-emerald-200" },
-  disabled: { label: "禁用", color: "bg-gray-100 text-gray-600 border-gray-200" },
-  exhausted: { label: "余额耗尽", color: "bg-amber-50 text-amber-700 border-amber-200" },
-  error: { label: "异常", color: "bg-red-50 text-red-700 border-red-200" },
+const STATUS_MAP: Record<string, { label: string; color: string; barColor: string }> = {
+  active: { label: "正常", color: "bg-emerald-50 text-emerald-700 border-emerald-200", barColor: "bg-emerald-500" },
+  disabled: { label: "禁用", color: "bg-gray-100 text-gray-600 border-gray-200", barColor: "bg-gray-400" },
+  exhausted: { label: "余额耗尽", color: "bg-amber-50 text-amber-700 border-amber-200", barColor: "bg-amber-500" },
+  error: { label: "异常", color: "bg-red-50 text-red-700 border-red-200", barColor: "bg-red-500" },
 };
 
 export default function PoolDetailPage() {
@@ -279,24 +279,25 @@ export default function PoolDetailPage() {
       />
 
       {/* Pool info card */}
-      <Card className="border-border/70">
+      <Card className="panel overflow-hidden">
         <CardContent className="flex flex-col gap-5 p-5 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-1">
-            <div className="text-sm text-muted-foreground">请求地址</div>
-            <div className="font-mono text-sm">{pool.base_url}</div>
+            <div className="text-xs uppercase tracking-wider text-muted-foreground">请求地址</div>
+            <div className="inline-flex items-center rounded-lg bg-gray-100 px-3 py-1.5 font-mono text-sm">{pool.base_url}</div>
           </div>
           <div className="flex items-center gap-4">
             <button type="button" onClick={() => setModelsDialogOpen(true)}
-              className="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-center transition-colors hover:border-blue-300 hover:bg-blue-50">
+              className="stat-gradient-blue rounded-2xl px-4 py-3 text-center transition-all hover:shadow-md">
               <div className="text-xs text-muted-foreground">模型数</div>
-              <div className="mt-1 text-2xl font-semibold">{pool.models.length}</div>
+              <div className="mt-1 text-2xl font-semibold tabular-nums">{pool.models.length}</div>
               <div className="mt-1 text-[11px] text-blue-600">点击查看</div>
             </button>
-            <div className="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-center">
+            <div className="stat-gradient-purple rounded-2xl px-4 py-3 text-center">
               <div className="text-xs text-muted-foreground">账号数</div>
-              <div className="mt-1 text-2xl font-semibold">{pool.accounts.length}</div>
+              <div className="mt-1 text-2xl font-semibold tabular-nums">{pool.accounts.length}</div>
             </div>
-            <span className={`inline-flex items-center whitespace-nowrap rounded-full border px-3 py-1.5 text-sm ${pool.is_enabled ? "border-green-200 bg-green-50 text-green-700" : "border-gray-200 bg-gray-100 text-gray-600"}`}>
+            <span className="inline-flex items-center gap-2 whitespace-nowrap rounded-full border px-3 py-1.5 text-sm">
+              <span className={`h-2 w-2 rounded-full ${pool.is_enabled ? "bg-emerald-500 animate-pulse-ring" : "bg-gray-400"}`} />
               {pool.is_enabled ? "启用中" : "已停用"}
             </span>
           </div>
@@ -318,10 +319,11 @@ export default function PoolDetailPage() {
           <Card><CardContent className="py-8 text-center text-sm text-muted-foreground">暂无账号，点击上方按钮添加</CardContent></Card>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {pool.accounts.map((a) => {
+            {pool.accounts.map((a, idx) => {
               const st = STATUS_MAP[a.status] ?? STATUS_MAP.error;
               return (
-                <Card key={a.id} className="transition-all hover:-translate-y-0.5 hover:border-gray-300 hover:shadow-md">
+                <Card key={a.id} className="animate-slide-up overflow-hidden transition-all hover:-translate-y-0.5 hover:border-gray-300 hover:shadow-md" style={{ animationDelay: `${idx * 80}ms` }}>
+                  <div className={`h-[3px] ${st.barColor}`} />
                   <CardContent className="flex h-full flex-col gap-3 p-5">
                     {/* Header: name + status */}
                     <div className="flex items-start justify-between">
@@ -339,13 +341,13 @@ export default function PoolDetailPage() {
 
                     {/* Key metrics */}
                     <div className="grid grid-cols-2 gap-2">
-                      <div className="rounded-lg bg-gray-50 px-3 py-2">
+                      <div className="stat-gradient-green rounded-lg px-3 py-2">
                         <div className="flex items-center gap-1 text-xs text-muted-foreground"><CircleDollarSign className="h-3 w-3" /> 余额</div>
-                        <div className="mt-0.5 text-sm font-semibold">{formatYuan(a.balance)}</div>
+                        <div className="mt-0.5 text-sm font-semibold tabular-nums">{formatYuan(a.balance)}</div>
                       </div>
-                      <div className="rounded-lg bg-gray-50 px-3 py-2">
+                      <div className="stat-gradient-blue rounded-lg px-3 py-2">
                         <div className="flex items-center gap-1 text-xs text-muted-foreground"><Zap className="h-3 w-3" /> 权重</div>
-                        <div className="mt-0.5 text-sm font-semibold">{a.weight}</div>
+                        <div className="mt-0.5 text-sm font-semibold tabular-nums">{a.weight}</div>
                       </div>
                     </div>
 
@@ -353,12 +355,12 @@ export default function PoolDetailPage() {
                     {(a.rpm_limit != null || a.tpm_limit != null) && (
                       <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
                         {a.rpm_limit != null && (
-                          <span className="inline-flex items-center gap-1 rounded bg-blue-50 px-2 py-0.5 text-blue-700">
+                          <span className="inline-flex items-center gap-1 rounded border-l-2 border-blue-400 bg-blue-50 px-2 py-0.5 text-blue-700">
                             <Gauge className="h-3 w-3" /> {a.rpm_limit} RPM
                           </span>
                         )}
                         {a.tpm_limit != null && (
-                          <span className="inline-flex items-center gap-1 rounded bg-purple-50 px-2 py-0.5 text-purple-700">
+                          <span className="inline-flex items-center gap-1 rounded border-l-2 border-purple-400 bg-purple-50 px-2 py-0.5 text-purple-700">
                             <Gauge className="h-3 w-3" /> {a.tpm_limit.toLocaleString()} TPM
                           </span>
                         )}
@@ -494,7 +496,7 @@ export default function PoolDetailPage() {
             <DialogTitle>支持的模型</DialogTitle>
             <DialogDescription>{pool.name} · 共 {pool.models.length} 个模型</DialogDescription>
           </DialogHeader>
-          <div className="flex gap-2 pb-2">
+          <div className="flex gap-2 border-b border-gray-100 pb-3">
             <Button variant="outline" size="sm" onClick={handleSyncModels} disabled={syncing}>
               <RefreshCw className={`mr-1.5 h-4 w-4 ${syncing ? "animate-spin" : ""}`} /> {syncing ? "同步中..." : "同步模型"}
             </Button>
@@ -511,13 +513,14 @@ export default function PoolDetailPage() {
                   <div key={m.id} className="flex items-center justify-between rounded-lg border border-gray-200 px-4 py-3 transition-colors hover:bg-gray-50">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
+                        <span className="h-2 w-2 shrink-0 rounded-full bg-blue-500" />
                         <Cpu className="h-4 w-4 shrink-0 text-blue-500" />
                         <span className="truncate font-medium text-sm">{m.model_slug}</span>
                         {m.model_slug !== m.upstream_model_id && (
                           <span className="truncate text-xs text-muted-foreground">→ {m.upstream_model_id}</span>
                         )}
                       </div>
-                      <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 pl-6 text-xs text-muted-foreground">
+                      <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 pl-8 text-xs text-muted-foreground tabular-nums">
                         <span>输入 {(m.input_price_per_million / 1_000_000).toFixed(2)} 元/M</span>
                         <span>输出 {(m.output_price_per_million / 1_000_000).toFixed(2)} 元/M</span>
                         {m.cached_input_price_per_million != null && <span>缓存 {(m.cached_input_price_per_million / 1_000_000).toFixed(2)} 元/M</span>}

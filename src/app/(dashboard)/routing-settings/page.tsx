@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Settings, Shield } from "lucide-react";
+import { ArrowRight, Layers, Settings, Settings2, Shield, Scale } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { EmptyState } from "@/components/empty-state";
 import { LoadingSpinner } from "@/components/loading-spinner";
@@ -23,6 +23,10 @@ const GROUP_LABELS: Record<string, string> = {
   general: "通用设置",
   weights: "权重配置",
 };
+const GROUP_ICONS: Record<string, typeof Settings2> = {
+  general: Settings2,
+  weights: Scale,
+};
 
 const TIER_LABELS: Record<string, string> = {
   "1": "最高难度",
@@ -30,6 +34,14 @@ const TIER_LABELS: Record<string, string> = {
   "3": "中等难度",
   "4": "较低难度",
   "5": "最低难度",
+};
+
+const TIER_BADGE_COLORS: Record<string, string> = {
+  "1": "bg-red-500",
+  "2": "bg-orange-500",
+  "3": "bg-yellow-500",
+  "4": "bg-green-500",
+  "5": "bg-cyan-500",
 };
 
 function parseScoreBands(raw: string): Record<number, string> {
@@ -210,12 +222,16 @@ export default function RoutingSettingsPage() {
         const items = data?.[group];
         if (!items || items.length === 0) return null;
         const sorted = [...items].sort((a, b) => a.sort_order - b.sort_order);
+        const GroupIcon = GROUP_ICONS[group] ?? Settings2;
         return (
           <Card key={group}>
             <CardContent className="p-5">
-              <h3 className="mb-4 text-sm font-semibold text-foreground">
-                {GROUP_LABELS[group] || group}
-              </h3>
+              <div className="mb-4 flex items-center gap-2 border-b border-gray-100 pb-3">
+                <GroupIcon className="h-4 w-4 text-muted-foreground" />
+                <h3 className="text-sm font-semibold text-foreground">
+                  {GROUP_LABELS[group] || group}
+                </h3>
+              </div>
               <div className="space-y-4">
                 {sorted.map((item) => (
                   <div key={item.key} className="space-y-1.5">
@@ -253,71 +269,87 @@ export default function RoutingSettingsPage() {
       {tierModelItems.length > 0 && (
         <Card>
           <CardContent className="p-5">
-            <h3 className="mb-1 text-sm font-semibold text-foreground">难度分层与模型映射</h3>
-            <p className="mb-4 text-xs text-muted-foreground">
-              每个层级对应一个难度分数区间，请求会根据推理得分路由到对应层级的模型
-            </p>
-            <div className="space-y-3">
-              {tierModelItems.map((item) => {
-                const tierNum = item.key.replace("tier_", "").replace("_model", "");
-                const tierInt = parseInt(tierNum);
-                const range = tierRanges[tierInt] ?? "";
-                return (
-                  <div key={item.key} className="rounded-lg border p-3">
-                    <div className="mb-2 flex items-center gap-2">
-                      <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-gray-900 text-xs font-bold text-white">
-                        {tierNum}
-                      </span>
-                      <span className="text-sm font-medium">{item.label}</span>
-                      {TIER_LABELS[tierNum] && (
-                        <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] text-muted-foreground">
-                          {TIER_LABELS[tierNum]}
-                        </span>
+            <div className="mb-4 flex items-center gap-2 border-b border-gray-100 pb-3">
+              <Layers className="h-4 w-4 text-muted-foreground" />
+              <div>
+                <h3 className="text-sm font-semibold text-foreground">难度分层与模型映射</h3>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  每个层级对应一个难度分数区间，请求会根据推理得分路由到对应层级的模型
+                </p>
+              </div>
+            </div>
+            <div className="rounded-2xl bg-gray-50/50 p-4">
+              <div className="space-y-0">
+                {tierModelItems.map((item, idx) => {
+                  const tierNum = item.key.replace("tier_", "").replace("_model", "");
+                  const tierInt = parseInt(tierNum);
+                  const range = tierRanges[tierInt] ?? "";
+                  const badgeColor = TIER_BADGE_COLORS[tierNum] ?? "bg-gray-500";
+                  return (
+                    <div key={item.key}>
+                      <div className={`tier-${tierNum} rounded-lg border border-gray-200 bg-white p-3`}>
+                        <div className="mb-2 flex items-center gap-2">
+                          <span className={`inline-flex h-6 w-6 items-center justify-center rounded-md text-xs font-bold text-white ${badgeColor}`}>
+                            {tierNum}
+                          </span>
+                          <span className="text-sm font-medium">{item.label}</span>
+                          {TIER_LABELS[tierNum] && (
+                            <span className={`tier-badge-${tierNum} rounded-full px-2 py-0.5 text-[11px] font-medium`}>
+                              {TIER_LABELS[tierNum]}
+                            </span>
+                          )}
+                        </div>
+                        <div className="grid grid-cols-[1fr_auto_1fr] items-end gap-3">
+                          <div className="space-y-1">
+                            <Label className="text-xs">分数区间</Label>
+                            <Input
+                              value={range}
+                              onChange={(e) => setTierRanges((prev) => ({ ...prev, [tierInt]: e.target.value }))}
+                              placeholder="如 9-10"
+                              className="text-sm"
+                            />
+                          </div>
+                          <ArrowRight className="mb-2.5 h-4 w-4 text-muted-foreground" />
+                          <div className="space-y-1">
+                            <Label className="text-xs">调用模型</Label>
+                            <ModelCombobox
+                              value={formState.tier_model_map?.[item.key] ?? ""}
+                              onChange={(v) => handleFieldChange("tier_model_map", item.key, v)}
+                              availableModels={availableModels}
+                              placeholder="选择或输入模型名称"
+                            />
+                            {(() => {
+                              const currentModel = formState.tier_model_map?.[item.key] ?? "";
+                              if (!currentModel.trim()) return null;
+                              const info = availableModels.find((m) => m.model_slug === currentModel);
+                              if (info) {
+                                return (
+                                  <span className="text-[11px] text-muted-foreground">
+                                    号池：{info.pool_names.join("、")}
+                                  </span>
+                                );
+                              }
+                              return (
+                                <span className="inline-flex items-center gap-1 text-[11px] text-red-600">
+                                  ⚠ 无可用通道，保存将被拒绝
+                                </span>
+                              );
+                            })()}
+                          </div>
+                        </div>
+                        <p className="mt-1.5 text-[11px] text-muted-foreground">
+                          更新于 {formatShanghaiDateTime(item.updated_at)}
+                        </p>
+                      </div>
+                      {idx < tierModelItems.length - 1 && (
+                        <div className="flex justify-center py-1">
+                          <div className="h-4 border-l-2 border-dashed border-gray-300" />
+                        </div>
                       )}
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1">
-                        <Label className="text-xs">分数区间</Label>
-                        <Input
-                          value={range}
-                          onChange={(e) => setTierRanges((prev) => ({ ...prev, [tierInt]: e.target.value }))}
-                          placeholder="如 9-10"
-                          className="text-sm"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs">调用模型</Label>
-                        <ModelCombobox
-                          value={formState.tier_model_map?.[item.key] ?? ""}
-                          onChange={(v) => handleFieldChange("tier_model_map", item.key, v)}
-                          availableModels={availableModels}
-                          placeholder="选择或输入模型名称"
-                        />
-                        {(() => {
-                          const currentModel = formState.tier_model_map?.[item.key] ?? "";
-                          if (!currentModel.trim()) return null;
-                          const info = availableModels.find((m) => m.model_slug === currentModel);
-                          if (info) {
-                            return (
-                              <span className="text-[11px] text-muted-foreground">
-                                号池：{info.pool_names.join("、")}
-                              </span>
-                            );
-                          }
-                          return (
-                            <span className="inline-flex items-center gap-1 text-[11px] text-red-600">
-                              ⚠ 无可用通道，保存将被拒绝
-                            </span>
-                          );
-                        })()}
-                      </div>
-                    </div>
-                    <p className="mt-1.5 text-[11px] text-muted-foreground">
-                      更新于 {formatShanghaiDateTime(item.updated_at)}
-                    </p>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
             <div className="mt-5 flex justify-end">
               <Button onClick={handleTierSave} disabled={saving.tiers}>

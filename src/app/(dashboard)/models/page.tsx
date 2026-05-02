@@ -299,78 +299,82 @@ export default function ModelsPage() {
               return (
                 <div
                   key={model.id}
-                  className="group flex cursor-pointer flex-col rounded-xl bg-white p-5 ring-1 ring-inset ring-gray-100 transition-all hover:-translate-y-0.5 hover:shadow-lg"
+                  className={`group card-hover flex cursor-pointer flex-col rounded-xl bg-white ring-1 ring-inset ring-gray-100 transition-all`}
                   onClick={() => router.push(`/models/${model.slug}`)}
                 >
                   {/* 顶部：logo + 分类 */}
-                  <div className="mb-3 flex items-center justify-between">
+                  <div className="mb-3 flex items-center justify-between rounded-t-xl bg-gradient-to-r from-gray-50 to-gray-100/50 p-5 pb-3">
                     <div className="flex-shrink-0">
                       {model.vendor.logo_url?.startsWith("http") ? (
                         <img src={model.vendor.logo_url} alt={model.vendor.name} className="h-[42px] w-[42px] rounded-xl object-contain" />
                       ) : (
-                        <div className="flex h-[42px] w-[42px] items-center justify-center rounded-xl bg-gray-100 text-sm font-semibold text-gray-600">
+                        <div className="flex h-[42px] w-[42px] items-center justify-center rounded-xl bg-white shadow-sm text-sm font-semibold text-gray-600">
                           {model.vendor.name.charAt(0).toUpperCase()}
                         </div>
                       )}
                     </div>
-                    {model.categories[0] && (
-                      <span className="rounded-full bg-secondary px-2.5 py-0.5 text-xs text-muted-foreground">
-                        {model.categories[0].name}
-                      </span>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {model.categories[0] && (
+                        <span className="rounded-full bg-white px-2.5 py-0.5 text-xs text-muted-foreground shadow-sm">
+                          {model.categories[0].name}
+                        </span>
+                      )}
+                    </div>
                   </div>
 
-                  {/* 模型名称 */}
-                  <h3 className="mb-2 line-clamp-2 text-base font-semibold text-foreground">
-                    {model.vendor.name}/{model.name}
-                  </h3>
+                  <div className="flex flex-1 flex-col px-5 pb-5">
+                    {/* 模型名称 */}
+                    <h3 className="mb-2 line-clamp-2 text-base font-semibold text-foreground">
+                      {model.vendor.name}/{model.name}
+                    </h3>
 
-                  {/* 能力标签 */}
-                  {(visibleTags.length > 0 || model.is_reasoning_model) && (
-                    <div className="mb-3 flex flex-wrap gap-1.5">
-                      {visibleTags.map((tag) => (
-                        <span key={tag} className="rounded bg-gray-100 px-2 py-0.5 text-[11px] text-gray-700">{tag}</span>
-                      ))}
-                      {model.is_reasoning_model && (
-                        <span className="rounded bg-violet-100 px-2 py-0.5 text-[11px] text-violet-700">推理</span>
-                      )}
-                      {extraTagCount > 0 && (
-                        <span className="rounded bg-secondary px-2 py-0.5 text-[11px] text-muted-foreground">+{extraTagCount}</span>
-                      )}
-                    </div>
-                  )}
-
-                  {/* 底部统计 + 操作 */}
-                  <div className="mt-auto border-t border-gray-100 pt-3">
-                    <div className="grid grid-cols-3 gap-2 text-center">
-                      <div>
-                        <div className="text-[10px] uppercase text-muted-foreground">CTX</div>
-                        <div className="text-sm font-medium text-foreground">{formatContextWindow(model.context_window)}</div>
+                    {/* 能力标签 */}
+                    {(visibleTags.length > 0 || model.is_reasoning_model) && (
+                      <div className="mb-3 flex flex-wrap gap-1.5">
+                        {visibleTags.map((tag) => (
+                          <span key={tag} className="rounded bg-gray-100 px-2 py-0.5 text-[11px] text-gray-700">{tag}</span>
+                        ))}
+                        {model.is_reasoning_model && (
+                          <span className="rounded bg-violet-100 px-2 py-0.5 text-[11px] text-violet-700">推理</span>
+                        )}
+                        {extraTagCount > 0 && (
+                          <span className="rounded bg-secondary px-2 py-0.5 text-[11px] text-muted-foreground">+{extraTagCount}</span>
+                        )}
                       </div>
-                      <div>
-                        <div className="text-[10px] uppercase text-muted-foreground">IN / 1M</div>
-                        <div className="text-sm font-medium text-foreground">
-                          {model.price_input_per_m_fen != null ? formatYuan(model.price_input_per_m_fen) : "-"}
+                    )}
+
+                    {/* 底部统计 + 操作 */}
+                    <div className="mt-auto border-t border-gray-100 pt-3">
+                      <div className="grid grid-cols-3 gap-2 text-center">
+                        <div className="rounded-lg bg-gray-50 py-1.5">
+                          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">CTX</div>
+                          <div className="text-sm font-medium tabular-nums text-foreground">{formatContextWindow(model.context_window)}</div>
+                        </div>
+                        <div className="rounded-lg bg-gray-50 py-1.5">
+                          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">IN / 1M</div>
+                          <div className="text-sm font-medium tabular-nums text-foreground">
+                            {model.price_input_per_m_fen != null ? formatYuan(model.price_input_per_m_fen) : "-"}
+                          </div>
+                        </div>
+                        <div className="rounded-lg bg-gray-50 py-1.5">
+                          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">OUT / 1M</div>
+                          <div className="text-sm font-medium tabular-nums text-foreground">
+                            {model.price_output_per_m_fen != null ? formatYuan(model.price_output_per_m_fen) : "-"}
+                          </div>
                         </div>
                       </div>
-                      <div>
-                        <div className="text-[10px] uppercase text-muted-foreground">OUT / 1M</div>
-                        <div className="text-sm font-medium text-foreground">
-                          {model.price_output_per_m_fen != null ? formatYuan(model.price_output_per_m_fen) : "-"}
-                        </div>
-                      </div>
-                    </div>
 
-                    <div className="mt-2 flex items-center justify-end gap-1">
-                      <button type="button" onClick={(e) => handleEditModel(e, model)} className="rounded-md p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground" title="编辑">
-                        <Edit3 className="h-3.5 w-3.5" />
-                      </button>
-                      <button type="button" onClick={(e) => void handleDisableModel(e, model)} className="rounded-md p-1.5 text-muted-foreground hover:bg-gray-100 hover:text-gray-600" title="停用">
-                        <PowerOff className="h-3.5 w-3.5" />
-                      </button>
-                      <button type="button" onClick={(e) => { e.stopPropagation(); setDeleteTarget(model); }} className="rounded-md p-1.5 text-muted-foreground hover:bg-red-50 hover:text-red-500" title="删除">
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
+                      <div className="mt-2 flex items-center justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                        <button type="button" onClick={(e) => handleEditModel(e, model)} className="rounded-md p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground" title="编辑">
+                          <Edit3 className="h-3.5 w-3.5" />
+                        </button>
+                        <button type="button" onClick={(e) => void handleDisableModel(e, model)} className="rounded-md p-1.5 text-muted-foreground hover:bg-gray-100 hover:text-gray-600" title="停用">
+                          <PowerOff className="h-3.5 w-3.5" />
+                        </button>
+                        <button type="button" onClick={(e) => { e.stopPropagation(); setDeleteTarget(model); }} className="rounded-md p-1.5 text-muted-foreground hover:bg-red-50 hover:text-red-500" title="删除">
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>

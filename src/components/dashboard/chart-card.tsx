@@ -36,7 +36,7 @@ export function ChartCard({
 
   if (!tabs || tabs.length === 0) {
     return (
-      <Card className="panel">
+      <Card className="panel card-hover">
         <CardHeader className="pb-2">
           <CardTitle className="text-base font-semibold">{title}</CardTitle>
         </CardHeader>
@@ -46,9 +46,9 @@ export function ChartCard({
   }
 
   return (
-    <Card className="panel">
+    <Card className="panel card-hover">
       <Tabs value={activeTab ?? tabs[0].key} onValueChange={onTabChange}>
-        <CardHeader className="flex flex-row items-center justify-between gap-4 pb-2">
+        <CardHeader className="flex flex-row items-center justify-between gap-4 border-b border-gray-100 pb-3">
           <CardTitle className="text-base font-semibold">{title}</CardTitle>
           <TabsList>
             {tabs.map((t) => (

@@ -3,13 +3,20 @@ services:
     build:
       context: .
       args:
-        API_URL: ${API_URL:-http://host.docker.internal:8001}
+        API_URL: ${API_URL:-http://127.0.0.1:8001}
     ports:
-      - "${PORT:-3001}:3001"
+      - "127.0.0.1:${PORT:-3001}:3001"
     restart: unless-stopped
+    networks:
+      - frontend
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:3001/login"]
       interval: 30s
       timeout: 5s
       retries: 3
       start_period: 10s
+
+networks:
+  frontend:
+    external: true
+    name: eucal_frontend_network

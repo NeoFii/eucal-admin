@@ -6,10 +6,15 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
   CheckCircle2,
+  Database,
   Eye,
+  List,
+  Lock,
   RefreshCw,
   ScrollText,
+  Settings,
   Shield,
+  Users,
   XCircle,
 } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
@@ -77,13 +82,13 @@ const AUDIT_ROUTING_CONFIG_ACTION_OPTIONS = [
   { value: "rollback_routing_version", label: "回滚路由版本" },
 ];
 
-const AUDIT_CATEGORY_OPTIONS: Array<{ value: AdminAuditCategory; label: string }> = [
-  { value: "governance", label: "治理动作" },
-  { value: "auth", label: "认证事件" },
-  { value: "user_management", label: "用户管理" },
-  { value: "model_catalog", label: "模型目录" },
-  { value: "routing_config", label: "路由配置" },
-  { value: "all", label: "全部事件" },
+const AUDIT_CATEGORY_OPTIONS: Array<{ value: AdminAuditCategory; label: string; icon: typeof Shield; activeClass: string }> = [
+  { value: "governance", label: "治理动作", icon: Shield, activeClass: "bg-blue-600 text-white hover:bg-blue-700" },
+  { value: "auth", label: "认证事件", icon: Lock, activeClass: "bg-amber-600 text-white hover:bg-amber-700" },
+  { value: "user_management", label: "用户管理", icon: Users, activeClass: "bg-purple-600 text-white hover:bg-purple-700" },
+  { value: "model_catalog", label: "模型目录", icon: Database, activeClass: "bg-teal-600 text-white hover:bg-teal-700" },
+  { value: "routing_config", label: "路由配置", icon: Settings, activeClass: "bg-cyan-600 text-white hover:bg-cyan-700" },
+  { value: "all", label: "全部事件", icon: List, activeClass: "bg-gray-900 text-white hover:bg-gray-800" },
 ];
 
 const AUDIT_ACTION_LABELS: Record<string, string> = {
@@ -200,6 +205,21 @@ function formatJsonBlock(data: Record<string, unknown> | null) {
   return JSON.stringify(data, null, 2);
 }
 
+function formatRelativeTime(dateStr: string): string {
+  try {
+    const now = Date.now();
+    const then = new Date(dateStr).getTime();
+    const diff = now - then;
+    if (diff < 60_000) return "刚刚";
+    if (diff < 3_600_000) return `${Math.floor(diff / 60_000)} 分钟前`;
+    if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)} 小时前`;
+    if (diff < 604_800_000) return `${Math.floor(diff / 86_400_000)} 天前`;
+    return formatShanghaiDateTime(dateStr);
+  } catch {
+    return dateStr;
+  }
+}
+
 export default function AdminAuditLogsPage() {
   const user = useAuthStore((state) => state.user);
   const isSuperAdmin = user?.role === "super_admin";
@@ -227,13 +247,17 @@ export default function AdminAuditLogsPage() {
       header: "动作",
       render: (log) => {
         const logCategory = getAuditLogCategory(log.action);
+        const success = log.status === "success";
         return (
-          <div className="flex flex-col gap-2">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="font-medium text-foreground">{AUDIT_ACTION_LABELS[log.action] ?? log.action}</span>
-              <span className={`inline-flex items-center whitespace-nowrap rounded-full border px-2.5 py-1 text-xs font-medium ${getAuditCategoryBadgeClass(logCategory)}`}>
-                {AUDIT_CATEGORY_LABELS[logCategory]}
-              </span>
+          <div className="flex items-center gap-2">
+            <div className={`h-full w-0.5 self-stretch rounded-full ${success ? "bg-emerald-400" : "bg-red-400"}`} />
+            <div className="flex flex-col gap-1.5">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-medium text-foreground">{AUDIT_ACTION_LABELS[log.action] ?? log.action}</span>
+                <span className={`inline-flex items-center whitespace-nowrap rounded-full border px-2.5 py-0.5 text-[11px] font-medium ${getAuditCategoryBadgeClass(logCategory)}`}>
+                  {AUDIT_CATEGORY_LABELS[logCategory]}
+                </span>
+              </div>
             </div>
           </div>
         );
@@ -263,7 +287,9 @@ export default function AdminAuditLogsPage() {
       key: "time",
       header: "时间",
       render: (log) => (
-        <span className="text-sm text-muted-foreground">{formatShanghaiDateTime(log.created_at)}</span>
+        <span className="text-sm text-muted-foreground" title={formatShanghaiDateTime(log.created_at)}>
+          {formatRelativeTime(log.created_at)}
+        </span>
       ),
     },
     {
@@ -396,16 +422,24 @@ export default function AdminAuditLogsPage() {
       <Card className="panel">
         <CardContent className="space-y-4 p-5">
           <div className="flex flex-wrap gap-2">
-            {AUDIT_CATEGORY_OPTIONS.map((option) => (
-              <Button
-                key={option.value}
-                size="sm"
-                variant={category === option.value ? "default" : "outline"}
-                onClick={() => handleCategoryChange(option.value)}
-              >
-                {option.label}
-              </Button>
-            ))}
+            {AUDIT_CATEGORY_OPTIONS.map((option) => {
+              const CatIcon = option.icon;
+              const isActive = category === option.value;
+              return (
+                <button
+                  key={option.value}
+                  onClick={() => handleCategoryChange(option.value)}
+                  className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-medium transition-all ${
+                    isActive
+                      ? option.activeClass
+                      : "border border-gray-200 bg-white text-gray-600 hover:bg-gray-100 hover:text-gray-950"
+                  }`}
+                >
+                  <CatIcon className="h-3.5 w-3.5" />
+                  {option.label}
+                </button>
+              );
+            })}
           </div>
 
           <div className="grid gap-4 lg:grid-cols-[1.2fr_1fr_1fr_auto_auto] lg:items-end">
@@ -527,16 +561,16 @@ export default function AdminAuditLogsPage() {
 
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="rounded-2xl border border-border/80 bg-slate-950 p-4 text-xs text-slate-100">
-                  <div className="mb-3 flex items-center gap-2 text-sm font-medium text-white">
-                    <AlertTriangle className="h-4 w-4 text-amber-300" />
-                    变更前
+                  <div className="mb-3 flex items-center gap-2 rounded-lg bg-red-500/10 px-2.5 py-1.5 text-sm font-medium text-red-300">
+                    <AlertTriangle className="h-4 w-4" />
+                    变更前 (Before)
                   </div>
                   <pre className="overflow-x-auto whitespace-pre-wrap">{formatJsonBlock(detailLog.before_data)}</pre>
                 </div>
                 <div className="rounded-2xl border border-border/80 bg-slate-950 p-4 text-xs text-slate-100">
-                  <div className="mb-3 flex items-center gap-2 text-sm font-medium text-white">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-300" />
-                    变更后
+                  <div className="mb-3 flex items-center gap-2 rounded-lg bg-emerald-500/10 px-2.5 py-1.5 text-sm font-medium text-emerald-300">
+                    <CheckCircle2 className="h-4 w-4" />
+                    变更后 (After)
                   </div>
                   <pre className="overflow-x-auto whitespace-pre-wrap">{formatJsonBlock(detailLog.after_data)}</pre>
                 </div>

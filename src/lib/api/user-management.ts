@@ -7,6 +7,8 @@ import type {
   UserTransactionItem,
   UserUsageLogItem,
   UserUsageStatItem,
+  UsageAnalyticsData,
+  UsageAnalyticsRange,
   UpdateUserStatusRequest,
   ResetUserPasswordRequest,
   TopupUserRequest,
@@ -64,6 +66,10 @@ export const userManagementApi = {
     await apiClient.post(`${BASE}/${uid}/api-keys/${keyId}/disable`);
   },
 
+  enableApiKey: async (uid: string, keyId: number): Promise<void> => {
+    await apiClient.post(`${BASE}/${uid}/api-keys/${keyId}/enable`);
+  },
+
   getUsageLogs: async (params?: {
     page?: number;
     page_size?: number;
@@ -84,6 +90,19 @@ export const userManagementApi = {
     end?: string;
   }): Promise<UserUsageStatItem[]> => {
     const response = await apiClient.get<ApiResponse<UserUsageStatItem[]>>(`${BASE}/usage/stats`, { params });
+    return response.data.data;
+  },
+
+  getUserUsageStats: async (uid: string, params?: {
+    start?: string;
+    end?: string;
+  }): Promise<UserUsageStatItem[]> => {
+    const response = await apiClient.get<ApiResponse<UserUsageStatItem[]>>(`${BASE}/${uid}/usage/stats`, { params });
+    return response.data.data;
+  },
+
+  getUserUsageAnalytics: async (uid: string, range: UsageAnalyticsRange = "24h"): Promise<UsageAnalyticsData> => {
+    const response = await apiClient.get<ApiResponse<UsageAnalyticsData>>(`${BASE}/${uid}/usage/analytics`, { params: { range } });
     return response.data.data;
   },
 };

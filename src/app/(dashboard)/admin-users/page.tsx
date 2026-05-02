@@ -8,6 +8,7 @@ import {
   Plus,
   ScrollText,
   Shield,
+  User,
   UserCog,
   UserRoundCheck,
   UserRoundX,
@@ -42,16 +43,22 @@ const ROLE_CONFIG = {
   super_admin: {
     label: "超级管理员",
     className: "border-gray-300 bg-gray-100 text-gray-700",
+    icon: KeyRound,
+    avatarBg: "bg-gray-200 text-gray-700",
   },
   admin: {
     label: "管理员",
     className: "border-border bg-secondary text-secondary-foreground",
+    icon: User,
+    avatarBg: "bg-blue-100 text-blue-700",
   },
 } as const;
 
 const ROOT_BADGE = {
   label: "根管理员",
   className: "border-amber-300 bg-amber-100 text-amber-700",
+  icon: Shield,
+  avatarBg: "bg-amber-100 text-amber-700",
 } as const;
 
 const STATUS_CONFIG = {
@@ -184,31 +191,44 @@ export default function AdminUsersPage() {
     {
       key: "name",
       header: "管理员",
-      headerClassName: "px-6 py-4 text-center text-sm font-semibold",
+      headerClassName: "px-6 py-3.5 text-center text-xs font-semibold uppercase tracking-wider",
       className: "px-6 py-4 text-center",
-      render: (admin) => (
-        <div className="flex flex-col items-center gap-1">
-          <div className="flex items-center gap-2">
-            <span className="font-medium text-foreground">{admin.name}</span>
-            {admin.uid === user?.uid ? (
-              <span className="inline-flex items-center whitespace-nowrap rounded-full border border-gray-300 bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-700">
-                当前登录
+      render: (admin) => {
+        const roleInfo = admin.is_root ? ROOT_BADGE : ROLE_CONFIG[admin.role];
+        const initial = (admin.name || "?")[0].toUpperCase();
+        return (
+          <div className="flex flex-col items-center gap-1">
+            <div className="flex items-center gap-2.5">
+              <span className={`inline-flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold ${roleInfo.avatarBg}`}>
+                {initial}
               </span>
-            ) : null}
+              <div className="text-left">
+                <div className="flex items-center gap-1.5">
+                  <span className="font-medium text-foreground">{admin.name}</span>
+                  {admin.uid === user?.uid ? (
+                    <span className="inline-flex items-center whitespace-nowrap rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
+                      当前登录
+                    </span>
+                  ) : null}
+                </div>
+                <span className="text-sm text-muted-foreground">{admin.email}</span>
+              </div>
+            </div>
           </div>
-          <span className="text-sm text-muted-foreground">{admin.email}</span>
-        </div>
-      ),
+        );
+      },
     },
     {
       key: "role",
       header: "角色",
-      headerClassName: "px-6 py-4 text-center text-sm font-semibold",
+      headerClassName: "px-6 py-3.5 text-center text-xs font-semibold uppercase tracking-wider",
       className: "px-6 py-4 text-center",
       render: (admin) => {
         const badge = admin.is_root ? ROOT_BADGE : ROLE_CONFIG[admin.role];
+        const RoleIcon = badge.icon;
         return (
-          <span className={`inline-flex items-center whitespace-nowrap rounded-full border px-3 py-1 text-xs font-medium ${badge.className}`}>
+          <span className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1 text-xs font-medium ${badge.className}`}>
+            <RoleIcon className="h-3 w-3" />
             {badge.label}
           </span>
         );
@@ -217,7 +237,7 @@ export default function AdminUsersPage() {
     {
       key: "status",
       header: "状态",
-      headerClassName: "px-6 py-4 text-center text-sm font-semibold",
+      headerClassName: "px-6 py-3.5 text-center text-xs font-semibold uppercase tracking-wider",
       className: "px-6 py-4 text-center",
       render: (admin) => {
         const status = STATUS_CONFIG[admin.status as 0 | 1];
@@ -231,7 +251,7 @@ export default function AdminUsersPage() {
     {
       key: "last_login",
       header: "最近登录",
-      headerClassName: "px-6 py-4 text-center text-sm font-semibold",
+      headerClassName: "px-6 py-3.5 text-center text-xs font-semibold uppercase tracking-wider",
       className: "px-6 py-4 text-center text-sm text-muted-foreground",
       render: (admin) =>
         admin.last_login_at ? formatShanghaiDateTime(admin.last_login_at) : "从未登录",
@@ -239,14 +259,14 @@ export default function AdminUsersPage() {
     {
       key: "created_at",
       header: "创建时间",
-      headerClassName: "px-6 py-4 text-center text-sm font-semibold",
+      headerClassName: "px-6 py-3.5 text-center text-xs font-semibold uppercase tracking-wider",
       className: "px-6 py-4 text-center text-sm text-muted-foreground",
       render: (admin) => formatShanghaiDateTime(admin.created_at),
     },
     {
       key: "actions",
       header: "操作",
-      headerClassName: "px-6 py-4 text-center text-sm font-semibold",
+      headerClassName: "px-6 py-3.5 text-center text-xs font-semibold uppercase tracking-wider",
       className: "px-6 py-4 text-center",
       render: (admin) => {
         if (admin.is_root) {
@@ -363,8 +383,11 @@ export default function AdminUsersPage() {
         }
       />
 
-      <Card className="panel">
-        <CardContent className="grid gap-4 p-5 lg:grid-cols-[minmax(0,1fr)_auto_auto] lg:items-center">
+      <Card className="panel overflow-hidden">
+        <CardContent className="grid gap-4 bg-gradient-to-r from-gray-50 to-blue-50/30 p-5 lg:grid-cols-[auto_minmax(0,1fr)_auto_auto] lg:items-center">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white shadow-sm">
+            <Shield className="h-5 w-5 text-gray-600" />
+          </div>
           <div>
             <p className="text-sm font-medium text-foreground">治理范围</p>
             <p className="mt-1 text-sm text-muted-foreground">
