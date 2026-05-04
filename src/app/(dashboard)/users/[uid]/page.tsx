@@ -37,7 +37,7 @@ import { toast } from "@/hooks/use-toast";
 import { userManagementApi } from "@/lib/api/user-management";
 import { getErrorDetail } from "@/lib/errors";
 import { formatShanghaiDateTime } from "@/lib/time";
-import { formatYuan, yuanToMicroYuan } from "@/lib/pricing";
+import { formatYuan, formatYuanDetail, yuanToMicroYuan } from "@/lib/pricing";
 import { UserBalanceCards } from "@/components/user-detail/user-balance-cards";
 import { UserTokenTrendChart } from "@/components/user-detail/user-token-trend-chart";
 import { UserSpendingChart } from "@/components/user-detail/user-spending-chart";
@@ -154,8 +154,8 @@ export default function UserDetailPage() {
   const txColumns = useMemo<Column<UserTransactionItem>[]>(() => [
     { key: "id", header: "ID", headerClassName: "px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground/70", className: "px-5 py-3.5 text-sm tabular-nums text-muted-foreground", render: (t) => t.id },
     { key: "type", header: "类型", headerClassName: "px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground/70", className: "px-5 py-3.5 text-sm", render: (t) => <span className="inline-flex items-center rounded-md bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700">{TX_TYPE_LABELS[t.type] ?? `类型${t.type}`}</span> },
-    { key: "amount", header: "金额", headerClassName: "px-5 py-3.5 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground/70", className: "px-5 py-3.5 text-right text-sm font-medium tabular-nums", render: (t) => <span className={t.amount >= 0 ? "text-emerald-600" : "text-red-500"}>{t.amount >= 0 ? "+" : ""}{formatYuan(t.amount)}</span> },
-    { key: "balance_after", header: "变动后余额", headerClassName: "px-5 py-3.5 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground/70", className: "px-5 py-3.5 text-right text-sm tabular-nums text-muted-foreground", render: (t) => formatYuan(t.balance_after) },
+    { key: "amount", header: "金额", headerClassName: "px-5 py-3.5 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground/70", className: "px-5 py-3.5 text-right text-sm font-medium tabular-nums", render: (t) => <span className={t.amount >= 0 ? "text-emerald-600" : "text-red-500"}>{t.amount >= 0 ? "+" : ""}{formatYuanDetail(t.amount)}</span> },
+    { key: "balance_after", header: "变动后余额", headerClassName: "px-5 py-3.5 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground/70", className: "px-5 py-3.5 text-right text-sm tabular-nums text-muted-foreground", render: (t) => formatYuanDetail(t.balance_after) },
     { key: "remark", header: "备注", headerClassName: "px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground/70", className: "px-5 py-3.5 text-sm text-muted-foreground", render: (t) => t.remark || "—" },
     { key: "created_at", header: "时间", headerClassName: "px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground/70", className: "px-5 py-3.5 text-sm tabular-nums text-muted-foreground", render: (t) => formatShanghaiDateTime(t.created_at) },
   ], []);
