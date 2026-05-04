@@ -136,9 +136,9 @@ export default function ServiceLogsPage() {
         page,
         page_size: pageSize,
       });
-      setLogs(data.items);
-      setServiceResults(data.results);
-      setTotal(data.total);
+      setLogs(data.items ?? []);
+      setServiceResults(data.results ?? []);
+      setTotal(data.total ?? 0);
     } catch {
       setLogs([]);
       setServiceResults([]);
