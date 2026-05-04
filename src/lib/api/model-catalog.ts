@@ -50,6 +50,8 @@ export const modelCatalogApi = {
     category?: string;
     vendors?: string;
     q?: string;
+    /** active=仅在线 / archived=仅归档 / all=全部，缺省视为 active */
+    status?: "active" | "archived" | "all";
     page?: number;
     page_size?: number;
   }): Promise<PaginatedResponse<SupportedModelItem>> => {
@@ -72,7 +74,8 @@ export const modelCatalogApi = {
     return response.data.data;
   },
 
-  deleteModel: async (slug: string): Promise<void> => {
+  /** 归档模型（软删除）：把 is_active 置为 false。可通过 updateModel({ is_active: true }) 恢复。 */
+  archiveModel: async (slug: string): Promise<void> => {
     await apiClient.delete(`${BASE}/models/${slug}`);
   },
 
@@ -89,7 +92,12 @@ export const modelCatalogApi = {
     return all;
   },
 
-  getAllModels: async (params?: { category?: string; vendors?: string; q?: string }): Promise<SupportedModelItem[]> => {
+  getAllModels: async (params?: {
+    category?: string;
+    vendors?: string;
+    q?: string;
+    status?: "active" | "archived" | "all";
+  }): Promise<SupportedModelItem[]> => {
     const all: SupportedModelItem[] = [];
     let page = 1;
     const pageSize = 100;

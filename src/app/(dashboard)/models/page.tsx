@@ -4,22 +4,22 @@ import { type MouseEvent, useCallback, useEffect, useMemo, useState } from "reac
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
+  Archive,
+  ArchiveRestore,
   Blocks,
   Database,
   Edit3,
   Plus,
-  PowerOff,
   RefreshCw,
   Search,
-  Trash2,
   X,
 } from "lucide-react";
 
-import { ConfirmDialog } from "@/components/confirm-dialog";
 import { EmptyState } from "@/components/empty-state";
 import { ModelFormDialog } from "@/components/models/model-form-dialog";
 import { PageHeader } from "@/components/page-header";
 import { Pagination } from "@/components/pagination";
+import { VendorLogo } from "@/components/vendor-logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
@@ -58,12 +58,12 @@ export default function ModelsPage() {
   const [selectedVendors, setSelectedVendors] = useState<string[]>([]);
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
+  const [statusTab, setStatusTab] = useState<"active" | "archived">("active");
 
   const [loading, setLoading] = useState(true);
   const [modelSaving, setModelSaving] = useState(false);
   const [modelDialogOpen, setModelDialogOpen] = useState(false);
   const [editingModel, setEditingModel] = useState<SupportedModelItem | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<SupportedModelItem | null>(null);
   const [selectedVendorForCreate, setSelectedVendorForCreate] = useState<ModelVendorItem | null>(null);
 
   const hasFilters = !!selectedCategory || selectedVendors.length > 0 || !!query.trim();
@@ -80,14 +80,18 @@ export default function ModelsPage() {
   }, []);
 
   const loadModels = useCallback(async () => {
-    const params: Record<string, string | number> = { page, page_size: PAGE_SIZE };
+    const params: Record<string, string | number> = {
+      page,
+      page_size: PAGE_SIZE,
+      status: statusTab,
+    };
     if (selectedCategory) params.category = selectedCategory;
     if (selectedVendors.length > 0) params.vendors = selectedVendors.join(",");
     if (query.trim()) params.q = query.trim();
     const data = await modelCatalogApi.getModels(params);
     setModels(data.items);
     setTotal(data.total);
-  }, [page, selectedCategory, selectedVendors, query]);
+  }, [page, selectedCategory, selectedVendors, query, statusTab]);
 
   const loadAll = useCallback(async () => {
     setLoading(true);
@@ -102,7 +106,7 @@ export default function ModelsPage() {
 
   useEffect(() => { void loadAll(); }, [loadAll]);
 
-  useEffect(() => { setPage(1); }, [selectedCategory, selectedVendors, query]);
+  useEffect(() => { setPage(1); }, [selectedCategory, selectedVendors, query, statusTab]);
 
   const refreshModels = async () => {
     try { await loadModels(); } catch { toast.error("刷新失败", "请稍后重试"); }
@@ -151,26 +155,25 @@ export default function ModelsPage() {
     setModelDialogOpen(true);
   };
 
-  const handleDisableModel = async (e: MouseEvent<HTMLButtonElement>, model: SupportedModelItem) => {
+  const handleArchiveModel = async (e: MouseEvent<HTMLButtonElement>, model: SupportedModelItem) => {
     e.stopPropagation();
     try {
-      await modelCatalogApi.updateModel(model.slug, { is_active: false });
-      toast.success("状态已更新", `模型"${model.name}"已停用`);
+      await modelCatalogApi.archiveModel(model.slug);
+      toast.success("已归档", `模型"${model.name}"已移入归档`);
       await refreshModels();
     } catch (error) {
       toast.error("操作失败", getErrorDetail(error, "请重试"));
     }
   };
 
-  const handleDeleteModel = async () => {
-    if (!deleteTarget) return;
+  const handleRestoreModel = async (e: MouseEvent<HTMLButtonElement>, model: SupportedModelItem) => {
+    e.stopPropagation();
     try {
-      await modelCatalogApi.deleteModel(deleteTarget.slug);
-      toast.success("已删除", `模型"${deleteTarget.name}"已删除`);
-      setDeleteTarget(null);
+      await modelCatalogApi.updateModel(model.slug, { is_active: true });
+      toast.success("已恢复", `模型"${model.name}"已恢复为在线`);
       await refreshModels();
     } catch (error) {
-      toast.error("删除失败", getErrorDetail(error, "请重试"));
+      toast.error("操作失败", getErrorDetail(error, "请重试"));
     }
   };
 
@@ -192,7 +195,7 @@ export default function ModelsPage() {
       <PageHeader
         icon={Database}
         title="模型管理"
-        subtitle={`共 ${total} 个模型`}
+        subtitle={`共 ${total} 个${statusTab === "archived" ? "归档" : "在线"}模型`}
         actions={
           <>
             <Button variant="outline" size="sm" asChild>
@@ -209,6 +212,38 @@ export default function ModelsPage() {
           </>
         }
       />
+
+      {/* 状态 Tab：在线 / 归档 */}
+      <div className="border-b border-border">
+        <div className="flex gap-1">
+          {([
+            { key: "active", label: "在线模型" },
+            { key: "archived", label: "归档模型" },
+          ] as const).map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => setStatusTab(tab.key)}
+              className={`relative px-4 py-2 text-sm font-medium transition-colors ${
+                statusTab === tab.key
+                  ? "text-foreground"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {tab.label}
+              {statusTab === tab.key && (
+                <span className="absolute inset-x-2 -bottom-px h-0.5 bg-foreground" />
+              )}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {statusTab === "archived" && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50/60 px-4 py-2.5 text-sm text-amber-800">
+          归档模型不会出现在用户端模型列表中。可点击 <ArchiveRestore className="mx-0.5 inline h-3.5 w-3.5 align-text-bottom" /> 恢复为在线状态。
+        </div>
+      )}
 
       {/* 筛选面板 */}
       <div className="panel space-y-4 p-4 sm:p-5">
@@ -299,20 +334,21 @@ export default function ModelsPage() {
               return (
                 <div
                   key={model.id}
-                  className={`group card-hover flex cursor-pointer flex-col rounded-xl bg-white ring-1 ring-inset ring-gray-100 transition-all`}
+                  className={`group card-hover relative flex cursor-pointer flex-col rounded-xl bg-white ring-1 ring-inset transition-all ${
+                    statusTab === "archived"
+                      ? "ring-gray-200 [filter:grayscale(0.4)] opacity-90"
+                      : "ring-gray-100"
+                  }`}
                   onClick={() => router.push(`/models/${model.slug}`)}
                 >
                   {/* 顶部：logo + 分类 */}
                   <div className="mb-3 flex items-center justify-between rounded-t-xl bg-gradient-to-r from-gray-50 to-gray-100/50 p-5 pb-3">
-                    <div className="flex-shrink-0">
-                      {model.vendor.logo_url?.startsWith("http") ? (
-                        <img src={model.vendor.logo_url} alt={model.vendor.name} className="h-[42px] w-[42px] rounded-xl object-contain" />
-                      ) : (
-                        <div className="flex h-[42px] w-[42px] items-center justify-center rounded-xl bg-white shadow-sm text-sm font-semibold text-gray-600">
-                          {model.vendor.name.charAt(0).toUpperCase()}
-                        </div>
-                      )}
-                    </div>
+                    <VendorLogo
+                      name={model.vendor.name}
+                      logoUrl={model.vendor.logo_url}
+                      size={42}
+                      radius="md"
+                    />
                     <div className="flex items-center gap-2">
                       {model.categories[0] && (
                         <span className="rounded-full bg-white px-2.5 py-0.5 text-xs text-muted-foreground shadow-sm">
@@ -368,12 +404,25 @@ export default function ModelsPage() {
                         <button type="button" onClick={(e) => handleEditModel(e, model)} className="rounded-md p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground" title="编辑">
                           <Edit3 className="h-3.5 w-3.5" />
                         </button>
-                        <button type="button" onClick={(e) => void handleDisableModel(e, model)} className="rounded-md p-1.5 text-muted-foreground hover:bg-gray-100 hover:text-gray-600" title="停用">
-                          <PowerOff className="h-3.5 w-3.5" />
-                        </button>
-                        <button type="button" onClick={(e) => { e.stopPropagation(); setDeleteTarget(model); }} className="rounded-md p-1.5 text-muted-foreground hover:bg-red-50 hover:text-red-500" title="删除">
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
+                        {model.is_active ? (
+                          <button
+                            type="button"
+                            onClick={(e) => void handleArchiveModel(e, model)}
+                            className="rounded-md p-1.5 text-muted-foreground hover:bg-amber-50 hover:text-amber-600"
+                            title="归档（用户端将不再展示，可在归档列表恢复）"
+                          >
+                            <Archive className="h-3.5 w-3.5" />
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={(e) => void handleRestoreModel(e, model)}
+                            className="rounded-md p-1.5 text-emerald-600 hover:bg-emerald-50"
+                            title="恢复为在线"
+                          >
+                            <ArchiveRestore className="h-3.5 w-3.5" />
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -405,13 +454,7 @@ export default function ModelsPage() {
                     setModelDialogOpen(true);
                   }}
                 >
-                  {v.logo_url?.startsWith("http") ? (
-                    <img src={v.logo_url} alt={v.name} className="h-8 w-8 rounded-lg object-contain" />
-                  ) : (
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100 text-sm font-semibold text-gray-600">
-                      {v.name.charAt(0).toUpperCase()}
-                    </div>
-                  )}
+                  <VendorLogo name={v.name} logoUrl={v.logo_url} size={32} />
                   <div>
                     <div className="text-sm font-medium text-foreground">{v.name}</div>
                     <div className="text-xs text-muted-foreground">{v.slug}</div>
@@ -441,16 +484,6 @@ export default function ModelsPage() {
           availableModels={availableModels}
         />
       )}
-
-      <ConfirmDialog
-        open={!!deleteTarget}
-        onOpenChange={(open) => !open && setDeleteTarget(null)}
-        title="删除模型"
-        description={`确定要删除模型「${deleteTarget?.name}」吗？删除后该模型将不再对用户展示。`}
-        confirmLabel="删除"
-        variant="destructive"
-        onConfirm={handleDeleteModel}
-      />
     </div>
   );
 }

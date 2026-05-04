@@ -198,14 +198,13 @@ export interface SupportedModelItem {
   context_window: number | null;
   max_output_tokens: number | null;
   is_reasoning_model: boolean;
+  is_active: boolean;
   sort_order: number;
   vendor: ModelVendorBrief;
   categories: ModelCategoryBrief[];
 }
 
-export interface SupportedModelDetail extends SupportedModelItem {
-  is_active: boolean;
-}
+export type SupportedModelDetail = SupportedModelItem;
 
 export interface SupportedModelCreate {
   slug: string;

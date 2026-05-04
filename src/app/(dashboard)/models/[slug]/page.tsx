@@ -3,8 +3,8 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { ConfirmDialog } from "@/components/confirm-dialog";
 import { ModelFormDialog } from "@/components/models/model-form-dialog";
+import { VendorLogo } from "@/components/vendor-logo";
 import { modelCatalogApi } from "@/lib/api/model-catalog";
 import { poolsApi } from "@/lib/api/pools";
 import type {
@@ -24,9 +24,10 @@ import {
   Edit3,
   Layers,
   MessageSquare,
+  Archive,
+  ArchiveRestore,
   RefreshCw,
   Route,
-  Trash2,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -47,7 +48,6 @@ export default function ModelDetailPage() {
 
   const [model, setModel] = useState<SupportedModelDetail | null>(null);
   const [loading, setLoading] = useState(true);
-  const [deleteOpen, setDeleteOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [categories, setCategories] = useState<ModelCategoryItem[]>([]);
@@ -75,13 +75,24 @@ export default function ModelDetailPage() {
     init();
   }, [loadModel]);
 
-  const handleDelete = async () => {
+  const handleArchive = async () => {
     try {
-      await modelCatalogApi.deleteModel(slug);
-      toast.success("删除成功", "模型已删除");
+      await modelCatalogApi.archiveModel(slug);
+      toast.success("已归档", "模型已移入归档列表，可在归档中恢复");
       router.push("/models");
     } catch (error) {
-      toast.error("删除失败", getErrorDetail(error, "请重试"));
+      toast.error("归档失败", getErrorDetail(error, "请重试"));
+    }
+  };
+
+  const handleToggleActive = async () => {
+    if (!model) return;
+    try {
+      await modelCatalogApi.updateModel(slug, { is_active: !model.is_active });
+      toast.success("状态已更新", `模型已${model.is_active ? "归档" : "恢复"}`);
+      await loadModel();
+    } catch (error) {
+      toast.error("操作失败", getErrorDetail(error, "请重试"));
     }
   };
 
@@ -134,15 +145,27 @@ export default function ModelDetailPage() {
             <Edit3 className="mr-1.5 h-4 w-4" />
             编辑
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="text-red-500 hover:bg-red-50 hover:text-red-700"
-            onClick={() => setDeleteOpen(true)}
-          >
-            <Trash2 className="mr-1.5 h-4 w-4" />
-            删除
-          </Button>
+          {model.is_active ? (
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-amber-600 hover:bg-amber-50 hover:text-amber-700"
+              onClick={handleArchive}
+            >
+              <Archive className="mr-1.5 h-4 w-4" />
+              归档
+            </Button>
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700"
+              onClick={handleToggleActive}
+            >
+              <ArchiveRestore className="mr-1.5 h-4 w-4" />
+              恢复
+            </Button>
+          )}
         </div>
       </div>
 
@@ -150,17 +173,13 @@ export default function ModelDetailPage() {
       <div className="panel overflow-hidden">
         <div className="bg-gradient-to-r from-gray-50 via-gray-100/60 to-gray-50 p-6 pb-5">
           <div className="flex items-center gap-4 mb-4">
-            {model.vendor.logo_url?.startsWith("http") ? (
-              <img
-                src={model.vendor.logo_url}
-                alt={model.vendor.name}
-                className="h-14 w-14 flex-shrink-0 rounded-xl object-contain shadow-sm"
-              />
-            ) : (
-              <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-xl bg-white text-lg font-semibold text-gray-600 shadow-sm">
-                {model.vendor.name.charAt(0).toUpperCase()}
-              </div>
-            )}
+            <VendorLogo
+              name={model.vendor.name}
+              logoUrl={model.vendor.logo_url}
+              size={56}
+              radius="md"
+              className="shadow-sm"
+            />
             <div>
               <h1 className="text-2xl font-semibold text-foreground lg:text-3xl">
                 {model.vendor.name}
@@ -266,16 +285,6 @@ export default function ModelDetailPage() {
           </div>
         </div>
       )}
-
-      <ConfirmDialog
-        open={deleteOpen}
-        onOpenChange={setDeleteOpen}
-        title="删除模型"
-        description={`确定要删除模型「${model.vendor.name}/${model.name}」吗？此操作不可撤销。`}
-        confirmLabel="删除"
-        variant="destructive"
-        onConfirm={handleDelete}
-      />
 
       <ModelFormDialog
         open={editOpen}
