@@ -72,6 +72,30 @@ const SERVICE_ACTIVE_CLASSES: Record<string, string> = {
   "inference-service": "bg-amber-600 text-white shadow-sm",
 };
 
+// Event family → chip color. Keep semantics aligned with the backend log_event
+// callsites; unmatched events fall through to EVENT_DEFAULT_CLASS so new event
+// names degrade gracefully (visible but neutral).
+const EVENT_FAMILY_CLASSES: Record<string, string> = {
+  request:  "bg-slate-100 text-slate-700 border-slate-300",
+  chat:     "bg-purple-100 text-purple-700 border-purple-300",
+  classify: "bg-cyan-100 text-cyan-700 border-cyan-300",
+  auth:     "bg-amber-100 text-amber-700 border-amber-300",
+  config:   "bg-emerald-100 text-emerald-700 border-emerald-300",
+  service:  "bg-gray-100 text-gray-600 border-gray-300",
+};
+const EVENT_DEFAULT_CLASS = "bg-gray-50 text-gray-500 border-gray-200";
+
+function eventFamily(event: string): keyof typeof EVENT_FAMILY_CLASSES | null {
+  if (!event || event === "log") return null;
+  if (event.startsWith("request"))  return "request";
+  if (event.startsWith("chat"))     return "chat";
+  if (event.startsWith("classify")) return "classify";
+  if (/^(admin|user)?(Login|Logout|Register|Password|Token|CodeLogin)/.test(event)) return "auth";
+  if (event.startsWith("config"))   return "config";
+  if (event.startsWith("service")) return "service";
+  return null;
+}
+
 const AUTO_REFRESH_INTERVAL = 5000;
 
 
@@ -370,10 +394,16 @@ export default function ServiceLogsPage() {
                               {entry.level}
                             </span>
                           </td>
-                          <td className="whitespace-nowrap px-4 py-2.5 text-xs text-foreground">
-                            <span className={entry.event === "log" ? "text-muted-foreground/50 italic" : ""}>
-                              {entry.event}
-                            </span>
+                          <td className="whitespace-nowrap px-4 py-2.5">
+                            {entry.event === "log" ? (
+                              <span className="text-xs italic text-muted-foreground/50">log</span>
+                            ) : (
+                              <span className={`inline-flex rounded-md border px-1.5 py-0.5 font-mono text-[11px] ${
+                                EVENT_FAMILY_CLASSES[eventFamily(entry.event) ?? ""] ?? EVENT_DEFAULT_CLASS
+                              }`}>
+                                {entry.event}
+                              </span>
+                            )}
                           </td>
                           <td className="px-4 py-2.5 text-xs text-muted-foreground">
                             <span className={isExpanded ? "whitespace-pre-wrap break-all" : "line-clamp-1"}>
