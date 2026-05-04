@@ -19,6 +19,7 @@ import {
   Lock,
   Layers,
   Terminal,
+  Activity,
 } from "lucide-react";
 import { useAuthStore } from "@/stores/auth";
 import { authApi } from "@/lib/api/auth";
@@ -80,6 +81,12 @@ const sidebarItems = [
     href: "/admin-audit-logs",
     icon: ScrollText,
     requiresSuperAdmin: true,
+  },
+  {
+    title: "路由监控",
+    href: "/route-monitor",
+    icon: Activity,
+    requiresSuperAdmin: false,
   },
   {
     title: "服务日志",

@@ -640,3 +640,153 @@ export interface UsageAnalyticsData {
   models: UsageAnalyticsModel[];
   buckets: UsageAnalyticsBucket[];
 }
+
+// ── 路由监控 (Route Monitor) ────────────────────────────────────
+
+export interface RouteRequestListParams {
+  page?: number;
+  page_size?: number;
+  user_id?: number;
+  model_name?: string;
+  selected_model?: string;
+  provider_slug?: string;
+  routing_tier?: number;
+  status?: number;
+  score_min?: number;
+  score_max?: number;
+  request_id?: string;
+  input_hash?: string;
+  start?: string;
+  end?: string;
+}
+
+export interface RouteAggregateParams {
+  start?: string;
+  end?: string;
+  user_id?: number;
+  model_name?: string;
+  provider_slug?: string;
+}
+
+export interface RoutingDetail {
+  scores_0_2?: Record<string, number> | null;
+  proto_weighted_0_2?: number | null;
+  fallback_routes?: string[] | null;
+  tier_model_map?: Record<string, string> | null;
+  score_bands_raw?: string | null;
+}
+
+export interface RequestPreview {
+  messages: Array<{ role: string; content: string }>;
+  response_text: string | null;
+  is_truncated: boolean;
+}
+
+export interface RouteRequestListItem {
+  id: number;
+  request_id: string;
+  user_id: number;
+  api_key_id: number | null;
+  model_name: string;
+  selected_model: string | null;
+  provider_slug: string | null;
+  upstream_model: string | null;
+  routing_tier: number | null;
+  score_source: string | null;
+  total_score_0_10: string | number | null;
+  inference_error_code: string | null;
+  messages_count: number | null;
+  duration_ms: number | null;
+  upstream_latency_ms: number | null;
+  is_stream: boolean;
+  status: number;
+  error_code: string | null;
+  prompt_tokens: number;
+  completion_tokens: number;
+  total_tokens: number;
+  cost: number;
+  input_hash: string | null;
+  routing_detail: RoutingDetail | null;
+  created_at: string;
+}
+
+export interface RouteRequestDetail extends RouteRequestListItem {
+  request_preview: RequestPreview | null;
+  error_msg: string | null;
+  config_version: number | null;
+  config_source: string | null;
+  inference_config_version: number | null;
+  inference_config_source: string | null;
+  router_trace_id: string | null;
+  cached_tokens: number;
+  provider_cost: number;
+  cost_detail: Record<string, unknown> | null;
+  ip: string | null;
+  updated_at: string | null;
+}
+
+export interface RouteMonitorListData {
+  items: RouteRequestListItem[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
+export interface RouteCompareItem {
+  id: number;
+  request_id: string;
+  selected_model: string | null;
+  routing_tier: number | null;
+  total_score_0_10: string | number | null;
+  score_source: string | null;
+  status: number;
+  duration_ms: number | null;
+  upstream_latency_ms: number | null;
+  cost: number;
+  config_version: number | null;
+  inference_config_version: number | null;
+  created_at: string;
+}
+
+export interface RouteCompareData {
+  input_hash: string | null;
+  target: RouteCompareItem | null;
+  siblings: RouteCompareItem[];
+}
+
+export interface TierBucket {
+  routing_tier: number;
+  count: number;
+  success_count: number;
+  error_count: number;
+}
+
+export interface ModelBucket {
+  selected_model: string;
+  count: number;
+}
+
+export interface ScoreBucket {
+  floor: number;
+  count: number;
+}
+
+export interface ProviderLatency {
+  provider_slug: string;
+  count: number;
+  p50_ms: number | null;
+  p95_ms: number | null;
+  p99_ms: number | null;
+}
+
+export interface RouteAggregateData {
+  range_start: string;
+  range_end: string;
+  total: number;
+  success_total: number;
+  error_total: number;
+  by_tier: TierBucket[];
+  by_model: ModelBucket[];
+  by_score: ScoreBucket[];
+  by_provider_latency: ProviderLatency[];
+}
