@@ -119,8 +119,11 @@ export default function VouchersPage() {
     try {
       await navigator.clipboard.writeText(code);
       setCopiedCode(code);
+      toast.success("已复制", "兑换码已复制到剪贴板");
       setTimeout(() => setCopiedCode(null), 2000);
-    } catch { /* ignore */ }
+    } catch {
+      toast.error("复制失败", "请手动选中并复制");
+    }
   };
 
   const handleCopyAll = async () => {
@@ -128,7 +131,9 @@ export default function VouchersPage() {
     try {
       await navigator.clipboard.writeText(allCodes);
       toast.success("已复制", `${generatedCodes.length} 个兑换码已复制到剪贴板`);
-    } catch { /* ignore */ }
+    } catch {
+      toast.error("复制失败", "请手动选中并复制");
+    }
   };
 
   const confirmDelete = async () => {

@@ -15,6 +15,7 @@ import {
   Clock,
   Globe,
   CalendarDays,
+  Gauge,
 } from "lucide-react";
 import type { Column } from "@/components/data-table";
 import { DataTable } from "@/components/data-table";
@@ -86,6 +87,9 @@ export default function UserDetailPage() {
   const [adjustOpen, setAdjustOpen] = useState(false);
   const [adjustAmount, setAdjustAmount] = useState("");
   const [adjustRemark, setAdjustRemark] = useState("");
+  const [rpmOpen, setRpmOpen] = useState(false);
+  const [rpmValue, setRpmValue] = useState("");
+  const [rpmRemark, setRpmRemark] = useState("");
 
   const loadDetail = useCallback(async () => {
     if (!isValidUid) { setDetail(null); setLoadingDetail(false); return; }
@@ -139,6 +143,29 @@ export default function UserDetailPage() {
     if (!adjustRemark.trim()) { toast.error("备注必填", "调账操作必须填写备注"); return; }
     try { await userManagementApi.adjustBalance(uid, { amount: microYuan, remark: adjustRemark }); toast.success("调账成功", `已调整 ${formatYuan(microYuan)}`); setAdjustOpen(false); setAdjustAmount(""); setAdjustRemark(""); await loadDetail(); if (tab === "transactions") await loadTransactions(); }
     catch (error) { toast.error("调账失败", getErrorDetail(error, "请稍后重试")); }
+  };
+  const handleUpdateRpm = async () => {
+    // 留空 = 清除覆盖、走全局默认；填写需为正整数
+    let rpmLimit: number | null = null;
+    const trimmed = rpmValue.trim();
+    if (trimmed !== "") {
+      const parsed = Number(trimmed);
+      if (!Number.isInteger(parsed) || parsed < 1) {
+        toast.error("RPM 无效", "请输入 ≥1 的正整数，或留空恢复默认");
+        return;
+      }
+      rpmLimit = parsed;
+    }
+    try {
+      await userManagementApi.updateRpm(uid, { rpm_limit: rpmLimit, remark: rpmRemark || undefined });
+      toast.success("RPM 已更新", rpmLimit == null ? "已恢复使用全局默认值" : `已设置为 ${rpmLimit} 次/分钟`);
+      setRpmOpen(false);
+      setRpmValue("");
+      setRpmRemark("");
+      await loadDetail();
+    } catch (error) {
+      toast.error("更新失败", getErrorDetail(error, "请稍后重试"));
+    }
   };
   const handleDisableKey = async (keyId: number) => {
     try { await userManagementApi.disableApiKey(uid, keyId); toast.success("已禁用密钥", "该API密钥已被禁用"); await loadApiKeys(); }
@@ -243,6 +270,13 @@ export default function UserDetailPage() {
               <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs" onClick={() => { setAdjustOpen(true); setAdjustAmount(""); setAdjustRemark(""); }}>
                 <Minus className="h-3.5 w-3.5" />调账
               </Button>
+              <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs" onClick={() => {
+                setRpmOpen(true);
+                setRpmValue(detail.rpm_limit != null ? String(detail.rpm_limit) : "");
+                setRpmRemark("");
+              }}>
+                <Gauge className="h-3.5 w-3.5" />调整 RPM
+              </Button>
             </div>
           </div>
         </div>
@@ -343,6 +377,47 @@ export default function UserDetailPage() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setAdjustOpen(false)}>取消</Button>
             <Button onClick={() => void handleAdjust()}>确认调账</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={rpmOpen} onOpenChange={setRpmOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>调整 RPM</DialogTitle>
+            <DialogDescription>
+              为 {detail.email} 设置每分钟请求上限。留空清除覆盖、恢复使用全局默认值（{detail.default_rpm ?? 20} 次/分钟）。
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="rpm-value">RPM 上限（次/分钟）</Label>
+              <Input
+                id="rpm-value"
+                type="number"
+                min={1}
+                step={1}
+                value={rpmValue}
+                onChange={(e) => setRpmValue(e.target.value)}
+                placeholder={`留空恢复默认（${detail.default_rpm ?? 20}）`}
+              />
+              <p className="text-xs text-muted-foreground">
+                当前生效值：{detail.rpm_limit != null ? `${detail.rpm_limit} 次/分钟` : `${detail.default_rpm ?? 20} 次/分钟（默认）`}
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="rpm-remark">备注（可选）</Label>
+              <Input
+                id="rpm-remark"
+                value={rpmRemark}
+                onChange={(e) => setRpmRemark(e.target.value)}
+                placeholder="例如：促销期间临时提升上限"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRpmOpen(false)}>取消</Button>
+            <Button onClick={() => void handleUpdateRpm()}>确认</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -13,6 +13,7 @@ import type {
   ResetUserPasswordRequest,
   TopupUserRequest,
   AdjustUserBalanceRequest,
+  UpdateUserRpmRequest,
 } from "@/types";
 
 const BASE = "/api/v1/users";
@@ -47,6 +48,10 @@ export const userManagementApi = {
 
   adjustBalance: async (uid: string, data: AdjustUserBalanceRequest): Promise<void> => {
     await apiClient.post(`${BASE}/${uid}/adjust-balance`, data);
+  },
+
+  updateRpm: async (uid: string, data: UpdateUserRpmRequest): Promise<void> => {
+    await apiClient.post(`${BASE}/${uid}/rpm`, data);
   },
 
   getTransactions: async (uid: string, params?: {

@@ -282,6 +282,7 @@ export interface UserListItem {
   email_verified_at: string | null;
   last_login_at: string | null;
   balance: number;
+  rpm_limit: number | null;
   created_at: string;
 }
 
@@ -297,6 +298,12 @@ export interface UserDetailData {
   used_amount: number;
   total_requests: number;
   total_tokens: number;
+  /** 用户级 RPM 上限。null = 未单独设置（使用 default_rpm）。 */
+  rpm_limit: number | null;
+  /** 未单独设置时使用的全局默认 RPM。 */
+  default_rpm: number;
+  /** 最近 60 秒滚动窗口内消耗的 token 数（实时 TPM）。 */
+  current_tpm: number;
   created_at: string;
   updated_at: string;
 }
@@ -386,6 +393,12 @@ export interface TopupUserRequest {
 export interface AdjustUserBalanceRequest {
   amount: number;
   remark: string;
+}
+
+export interface UpdateUserRpmRequest {
+  /** RPM 上限。null 清除覆盖、恢复使用全局默认。 */
+  rpm_limit: number | null;
+  remark?: string;
 }
 
 // ── 路由设置（key-value） ─────────────────────────────────

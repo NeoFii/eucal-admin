@@ -20,6 +20,7 @@ import {
   Layers,
   Terminal,
   Activity,
+  Gauge,
 } from "lucide-react";
 import { useAuthStore } from "@/stores/auth";
 import { authApi } from "@/lib/api/auth";
@@ -68,6 +69,12 @@ const sidebarItems = [
     title: "号池管理",
     href: "/pools",
     icon: Layers,
+    requiresSuperAdmin: true,
+  },
+  {
+    title: "速率限制",
+    href: "/rate-limits",
+    icon: Gauge,
     requiresSuperAdmin: true,
   },
   {
