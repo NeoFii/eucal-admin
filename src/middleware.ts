@@ -1,8 +1,11 @@
 ﻿import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-const ACCESS_COOKIE_NAME = "access_token";
-const REFRESH_COOKIE_NAME = "refresh_token";
+// Cookie names are namespaced (`admin_*`) so the user and admin front-ends can
+// coexist on the same domain. Must match `_set_auth_cookies` in
+// services/admin-service/src/controllers/auth.py.
+const ACCESS_COOKIE_NAME = "admin_access_token";
+const REFRESH_COOKIE_NAME = "admin_refresh_token";
 const publicPaths = ["/login"];
 
 export default function middleware(request: NextRequest) {
