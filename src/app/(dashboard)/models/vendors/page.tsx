@@ -17,6 +17,7 @@ import { ConfirmDialog } from "@/components/confirm-dialog";
 import { DataTable, type Column } from "@/components/data-table";
 import { VendorEditorDialog } from "@/components/models/vendor-editor-dialog";
 import { PageHeader } from "@/components/page-header";
+import { VendorLogo } from "@/components/vendor-logo";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -127,13 +128,7 @@ export default function VendorsPage() {
       header: "研发商",
       render: (vendor) => (
         <div className="flex items-center gap-3">
-          {vendor.logo_url?.startsWith("http") ? (
-            <img src={vendor.logo_url} alt={vendor.name} className="h-9 w-9 rounded-lg border border-border bg-secondary/40 object-contain" />
-          ) : (
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gray-100 text-sm font-semibold text-gray-600">
-              {vendor.name.charAt(0).toUpperCase()}
-            </div>
-          )}
+          <VendorLogo name={vendor.name} logoUrl={vendor.logo_url} size={36} className="border border-border bg-secondary/40" />
           <div className="flex flex-col">
             <span className="font-medium text-foreground">{vendor.name}</span>
             <span className="text-sm text-muted-foreground">{vendor.slug}</span>

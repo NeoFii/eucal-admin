@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { VendorLogo } from "@/components/vendor-logo";
 import { yuanToMicroYuan, microYuanToYuan } from "@/lib/pricing";
 import type {
   AvailableModelSlug,
@@ -170,17 +171,7 @@ export function ModelFormDialog({
           <div>
             <label className="mb-1 block text-sm font-medium text-foreground">所属研发商</label>
             <div className="flex items-center gap-3 rounded-xl border border-border bg-secondary/40 px-3 py-2.5">
-              {fixedVendor.logo_url ? (
-                <img
-                  src={fixedVendor.logo_url}
-                  alt={fixedVendor.name}
-                  className="h-8 w-8 rounded-lg object-contain"
-                />
-              ) : (
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100 text-sm font-semibold text-gray-600">
-                  {fixedVendor.name.charAt(0).toUpperCase()}
-                </div>
-              )}
+              <VendorLogo name={fixedVendor.name} logoUrl={fixedVendor.logo_url} size={32} />
               <div>
                 <div className="text-sm font-medium text-foreground">{fixedVendor.name}</div>
                 <div className="text-xs text-muted-foreground">{fixedVendor.slug}</div>
