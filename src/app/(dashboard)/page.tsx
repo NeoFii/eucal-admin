@@ -9,7 +9,11 @@ import { UserGrowthChart } from "@/components/dashboard/user-growth-chart";
 import { ApiCallsChart } from "@/components/dashboard/api-calls-chart";
 import { ApiCostChart } from "@/components/dashboard/api-cost-chart";
 import { SuccessRateChart } from "@/components/dashboard/success-rate-chart";
-import { useDashboardData } from "@/hooks/use-dashboard-data";
+import {
+  buildPresetRange,
+  useDashboardData,
+  type DashboardRangePreset,
+} from "@/hooks/use-dashboard-data";
 import { formatYuan } from "@/lib/pricing";
 import {
   LayoutDashboard,
@@ -73,12 +77,71 @@ function StatCard({
 }
 
 export default function DashboardPage() {
-  const { summary, userGrowth, usageTrends, loading, error } = useDashboardData();
+  const { summary, userGrowth, usageTrends, range, setRange, loading, error } = useDashboardData();
 
   const [growthTab, setGrowthTab] = useState("new");
   const [callsTab, setCallsTab] = useState("trend");
   const [costTab, setCostTab] = useState("revenue");
   const [rateTab, setRateTab] = useState("trend");
+
+  const handlePreset = (preset: Exclude<DashboardRangePreset, "custom">) => {
+    setRange(buildPresetRange(preset));
+  };
+
+  const handleCustomDate = (which: "start" | "end", value: string) => {
+    if (!value) return;
+    // <input type="date"> 给的是 yyyy-mm-dd，转成当天 00:00 的本地时间再 ISO
+    const dt = new Date(value);
+    if (Number.isNaN(dt.getTime())) return;
+    const next = { ...range, preset: "custom" as const };
+    if (which === "start") next.start = dt.toISOString();
+    else {
+      // end 设为该日 23:59:59.999 让筛选包含当日全部数据
+      dt.setHours(23, 59, 59, 999);
+      next.end = dt.toISOString();
+    }
+    setRange(next);
+  };
+
+  const dateInputValue = (iso: string) => iso.slice(0, 10);
+
+  const rangeSelector = (
+    <div className="flex flex-wrap items-center gap-2">
+      <div className="flex rounded-lg border border-border bg-secondary/40 p-0.5 text-xs">
+        {(["7d", "30d", "90d"] as const).map((p) => (
+          <button
+            key={p}
+            type="button"
+            onClick={() => handlePreset(p)}
+            className={`rounded-md px-3 py-1.5 transition-colors ${
+              range.preset === p
+                ? "bg-white text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            近 {p === "7d" ? "7" : p === "30d" ? "30" : "90"} 天
+          </button>
+        ))}
+      </div>
+      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+        <input
+          type="date"
+          value={dateInputValue(range.start)}
+          onChange={(e) => handleCustomDate("start", e.target.value)}
+          max={dateInputValue(range.end)}
+          className="rounded-md border border-border bg-background px-2 py-1.5 text-foreground focus:outline-none focus:ring-1 focus:ring-foreground/30"
+        />
+        <span>—</span>
+        <input
+          type="date"
+          value={dateInputValue(range.end)}
+          onChange={(e) => handleCustomDate("end", e.target.value)}
+          min={dateInputValue(range.start)}
+          className="rounded-md border border-border bg-background px-2 py-1.5 text-foreground focus:outline-none focus:ring-1 focus:ring-foreground/30"
+        />
+      </div>
+    </div>
+  );
 
   if (loading && !summary) {
     return (
@@ -87,6 +150,7 @@ export default function DashboardPage() {
           icon={LayoutDashboard}
           title="仪表盘"
           subtitle="平台运营概览"
+          actions={rangeSelector}
         />
         <div className="flex h-64 items-center justify-center">
           <LoadingSpinner />
@@ -102,6 +166,7 @@ export default function DashboardPage() {
           icon={LayoutDashboard}
           title="仪表盘"
           subtitle="平台运营概览"
+          actions={rangeSelector}
         />
         <Card className="panel">
           <CardContent className="flex flex-col items-center justify-center gap-3 py-16">
@@ -116,12 +181,8 @@ export default function DashboardPage() {
   const s = summary;
   const daily = usageTrends?.daily ?? [];
   const byModel = usageTrends?.by_model ?? [];
-  const profit = s
-    ? s.total_revenue - s.total_provider_cost
-    : 0;
-  const profitToday = s
-    ? s.revenue_today - s.provider_cost_today
-    : 0;
+  const profitInRange = s ? s.revenue_in_range - s.provider_cost_in_range : 0;
+  const profitToday = s ? s.revenue_today - s.provider_cost_today : 0;
 
   return (
     <div className="page-stack">
@@ -129,6 +190,7 @@ export default function DashboardPage() {
         icon={LayoutDashboard}
         title="仪表盘"
         subtitle="平台运营概览"
+        actions={rangeSelector}
       />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -136,36 +198,36 @@ export default function DashboardPage() {
           icon={Users}
           title="总用户数"
           value={s?.total_users?.toLocaleString() ?? "—"}
-          sub={s ? `今日新增 ${s.new_users_today}` : ""}
+          sub={s ? `区间新增 ${s.new_users_in_range} · 今日 ${s.new_users_today}` : ""}
           gradient="blue"
-          trend={s && s.new_users_today > 0 ? "up" : "neutral"}
+          trend={s && s.new_users_in_range > 0 ? "up" : "neutral"}
           delay={0}
         />
         <StatCard
           icon={Activity}
-          title="总调用次数"
-          value={s?.total_requests?.toLocaleString() ?? "—"}
+          title="区间调用次数"
+          value={s?.requests_in_range?.toLocaleString() ?? "—"}
           sub={s ? `今日 ${s.requests_today.toLocaleString()}` : ""}
           gradient="green"
-          trend={s && s.requests_today > 0 ? "up" : "neutral"}
+          trend={s && s.requests_in_range > 0 ? "up" : "neutral"}
           delay={100}
         />
         <StatCard
           icon={DollarSign}
-          title="总收入"
-          value={s ? formatYuan(s.total_revenue) : "—"}
+          title="区间收入"
+          value={s ? formatYuan(s.revenue_in_range) : "—"}
           sub={s ? `今日 ${formatYuan(s.revenue_today)}` : ""}
           gradient="purple"
-          trend={s && s.revenue_today > 0 ? "up" : "neutral"}
+          trend={s && s.revenue_in_range > 0 ? "up" : "neutral"}
           delay={200}
         />
         <StatCard
           icon={TrendingUp}
-          title="总利润"
-          value={s ? formatYuan(profit) : "—"}
+          title="区间利润"
+          value={s ? formatYuan(profitInRange) : "—"}
           sub={s ? `今日 ${formatYuan(profitToday)}` : ""}
           gradient="amber"
-          trend={s ? (profitToday > 0 ? "up" : profitToday < 0 ? "down" : "neutral") : "neutral"}
+          trend={s ? (profitInRange > 0 ? "up" : profitInRange < 0 ? "down" : "neutral") : "neutral"}
           delay={300}
         />
       </div>

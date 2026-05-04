@@ -557,13 +557,19 @@ export interface AvailableModelSlug {
 
 export interface DashboardSummary {
   total_users: number;
-  new_users_today: number;
   total_requests: number;
-  requests_today: number;
   total_revenue: number;
-  revenue_today: number;
   total_provider_cost: number;
+
+  new_users_today: number;
+  requests_today: number;
+  revenue_today: number;
   provider_cost_today: number;
+
+  new_users_in_range: number;
+  requests_in_range: number;
+  revenue_in_range: number;
+  provider_cost_in_range: number;
 }
 
 export interface UserGrowthPoint {

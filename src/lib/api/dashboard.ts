@@ -8,8 +8,8 @@ import type {
 const BASE = "/api/v1/dashboard";
 
 export const dashboardApi = {
-  getSummary: async (): Promise<DashboardSummary> => {
-    const response = await apiClient.get<ApiResponse<DashboardSummary>>(`${BASE}/summary`);
+  getSummary: async (params?: { start: string; end: string }): Promise<DashboardSummary> => {
+    const response = await apiClient.get<ApiResponse<DashboardSummary>>(`${BASE}/summary`, { params });
     return response.data.data;
   },
 
