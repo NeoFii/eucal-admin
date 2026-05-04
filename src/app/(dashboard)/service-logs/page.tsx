@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { Fragment, useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
+  ArrowUp,
   ChevronDown,
   ChevronRight,
   Pause,
@@ -97,6 +98,26 @@ function eventFamily(event: string): keyof typeof EVENT_FAMILY_CLASSES | null {
 }
 
 const AUTO_REFRESH_INTERVAL = 5000;
+const MAX_LOGS_IN_MEMORY = 500;
+const SCROLL_THRESHOLD = 200;
+
+/**
+ * 增量合并日志:用 ${service}-${seq} 去重(seq 在每个服务的 ring buffer 内单调),
+ * 按 timestamp 倒序,封顶 cap 条防止内存膨胀。incoming 中已存在的条目会覆盖
+ * existing 的同 key 条目,以便后端字段补齐时取最新版本。
+ */
+function mergeLogs(
+  existing: ServiceLogEntry[],
+  incoming: ServiceLogEntry[],
+  cap = MAX_LOGS_IN_MEMORY,
+): ServiceLogEntry[] {
+  const map = new Map<string, ServiceLogEntry>();
+  for (const e of existing) map.set(`${e.service}-${e.seq}`, e);
+  for (const e of incoming) map.set(`${e.service}-${e.seq}`, e);
+  const merged = Array.from(map.values());
+  merged.sort((a, b) => (b.timestamp ?? "").localeCompare(a.timestamp ?? ""));
+  return merged.slice(0, cap);
+}
 
 
 function formatLogTime(ts: string) {
@@ -126,6 +147,7 @@ export default function ServiceLogsPage() {
   const [searchInput, setSearchInput] = useState("");
   const [appliedSearch, setAppliedSearch] = useState("");
   const [logs, setLogs] = useState<ServiceLogEntry[]>([]);
+  const [pendingNewLogs, setPendingNewLogs] = useState<ServiceLogEntry[]>([]);
   const [serviceResults, setServiceResults] = useState<ServiceLogResult[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -133,6 +155,8 @@ export default function ServiceLogsPage() {
   const [loading, setLoading] = useState(true);
   const [autoRefresh, setAutoRefresh] = useState(true);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const isUserScrolledRef = useRef(false);
+  const scrollAnchorRef = useRef<{ y: number; height: number } | null>(null);
 
 
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
@@ -146,7 +170,9 @@ export default function ServiceLogsPage() {
     });
   };
 
-  const fetchLogs = useCallback(async () => {
+  // 全量替换:首次加载、过滤条件变化、翻页、手动刷新都走这里。
+  // 同时清空 pending buffer——上一过滤条件下缓存的新日志在新条件下不一定还匹配。
+  const fetchInitial = useCallback(async () => {
     if (!isSuperAdmin) {
       setLoading(false);
       return;
@@ -161,10 +187,12 @@ export default function ServiceLogsPage() {
         page_size: pageSize,
       });
       setLogs(data.items ?? []);
+      setPendingNewLogs([]);
       setServiceResults(data.results ?? []);
       setTotal(data.total ?? 0);
     } catch {
       setLogs([]);
+      setPendingNewLogs([]);
       setServiceResults([]);
       setTotal(0);
     } finally {
@@ -172,18 +200,86 @@ export default function ServiceLogsPage() {
     }
   }, [isSuperAdmin, service, level, appliedSearch, page, pageSize]);
 
-  useEffect(() => {
-    fetchLogs();
-  }, [fetchLogs]);
+  // 增量轮询:只在 page=1 时调度。结果按是否安全合并分流——
+  // 用户在交互(已展开/已滚动/标签隐藏)时塞进 pendingNewLogs 等手动 flush。
+  const pollOnce = useCallback(async () => {
+    if (!isSuperAdmin) return;
+    if (typeof document !== "undefined" && document.hidden) return;
+    try {
+      const data = await serviceLogsApi.getLogs({
+        service: service || undefined,
+        level: level || undefined,
+        search: appliedSearch || undefined,
+        page: 1,
+        page_size: pageSize,
+      });
+      const incoming = data.items ?? [];
+      const safeMerge =
+        expandedRows.size === 0 &&
+        !isUserScrolledRef.current &&
+        (typeof document === "undefined" || !document.hidden);
 
+      if (safeMerge) {
+        // 抓滚动锚点,useLayoutEffect 会在 DOM 更新后还原
+        scrollAnchorRef.current = {
+          y: window.scrollY,
+          height: document.documentElement.scrollHeight,
+        };
+        setLogs((prev) => mergeLogs(prev, incoming));
+        setServiceResults(data.results ?? []);
+        setTotal(data.total ?? 0);
+      } else {
+        setPendingNewLogs((prev) => mergeLogs(prev, incoming));
+      }
+    } catch {
+      // 静默失败,下个 tick 再试
+    }
+  }, [isSuperAdmin, service, level, appliedSearch, pageSize, expandedRows]);
+
+  const flushPending = useCallback(() => {
+    if (pendingNewLogs.length === 0) return;
+    setLogs((prev) => mergeLogs(prev, pendingNewLogs));
+    setPendingNewLogs([]);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [pendingNewLogs]);
+
+  // 过滤条件 / 翻页变化 → 整体替换
   useEffect(() => {
-    if (autoRefresh) {
-      timerRef.current = setInterval(fetchLogs, AUTO_REFRESH_INTERVAL);
+    fetchInitial();
+  }, [fetchInitial]);
+
+  // 自动刷新轮询,仅在 page=1 时启用(其他页是历史浏览,刷新无意义且会破坏分页)
+  useEffect(() => {
+    if (autoRefresh && page === 1) {
+      timerRef.current = setInterval(pollOnce, AUTO_REFRESH_INTERVAL);
     }
     return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
     };
-  }, [autoRefresh, fetchLogs]);
+  }, [autoRefresh, page, pollOnce]);
+
+  // 跟踪用户是否已滚动远离顶部
+  useEffect(() => {
+    const onScroll = () => {
+      isUserScrolledRef.current = window.scrollY > SCROLL_THRESHOLD;
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  // 增量合并后保持滚动位置:用 (scrollY, scrollHeight) 快照计算高度差还原
+  useLayoutEffect(() => {
+    const anchor = scrollAnchorRef.current;
+    if (!anchor) return;
+    const delta = document.documentElement.scrollHeight - anchor.height;
+    if (delta > 0 && anchor.y > 0) {
+      window.scrollTo({ top: anchor.y + delta, behavior: "instant" as ScrollBehavior });
+    }
+    scrollAnchorRef.current = null;
+  }, [logs]);
 
   const handleSearch = () => {
     setPage(1);
@@ -320,6 +416,19 @@ export default function ServiceLogsPage() {
       </Card>
 
 
+      {/* Pending new logs pill — 用户在阅读/已滚动时,新日志先暂存,点这里手动加载 */}
+      {pendingNewLogs.length > 0 && (
+        <div className="sticky top-2 z-30 flex justify-center pointer-events-none">
+          <button
+            onClick={flushPending}
+            className="pointer-events-auto inline-flex items-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-sm font-medium text-white shadow-lg ring-1 ring-emerald-700/30 transition-all hover:bg-emerald-700 hover:shadow-xl"
+          >
+            <ArrowUp className="h-4 w-4" />
+            {pendingNewLogs.length} 条新日志，点击加载
+          </button>
+        </div>
+      )}
+
       {/* Log entries */}
       <Card className="table-shell overflow-hidden">
         {/* Terminal header */}
@@ -362,8 +471,8 @@ export default function ServiceLogsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {logs.map((entry, idx) => {
-                    const rowKey = `${entry.service}-${entry.seq}-${idx}`;
+                  {logs.map((entry) => {
+                    const rowKey = `${entry.service}-${entry.seq}`;
                     const isExpanded = expandedRows.has(rowKey);
                     const msg = entry.message ?? "";
                     const extra = Object.fromEntries(
