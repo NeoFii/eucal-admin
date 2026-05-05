@@ -13,7 +13,6 @@ import type {
 
 const ReactECharts = dynamic(() => import("echarts-for-react"), { ssr: false });
 
-const TIER_COLORS = ["#10b981", "#06b6d4", "#6366f1", "#f59e0b", "#ef4444"];
 
 export function TierDistributionChart({ data }: { data: TierBucket[] }) {
   const items = useMemo(() => {
@@ -57,20 +56,16 @@ export function TierDistributionChart({ data }: { data: TierBucket[] }) {
             name: "成功",
             type: "bar",
             stack: "total",
-            data: items.map((i, idx) => ({
-              value: i.success,
-              itemStyle: { color: TIER_COLORS[idx % TIER_COLORS.length], borderRadius: [0, 0, 0, 0] },
-            })),
+            itemStyle: { color: "#10b981", borderRadius: [0, 0, 0, 0] },
+            data: items.map((i) => i.success),
             barMaxWidth: 60,
           },
           {
             name: "失败",
             type: "bar",
             stack: "total",
-            data: items.map((i) => ({
-              value: i.error,
-              itemStyle: { color: "#fecaca", borderRadius: [4, 4, 0, 0] },
-            })),
+            itemStyle: { color: "#ef4444", borderRadius: [4, 4, 0, 0] },
+            data: items.map((i) => i.error),
             barMaxWidth: 60,
           },
         ],
