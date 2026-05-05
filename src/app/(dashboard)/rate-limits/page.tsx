@@ -65,10 +65,10 @@ const RPM_RANGE_OPTIONS: Array<{
   bucketSeconds: number;
 }> = [
   { value: "1h", label: "最近 1 小时", bucketSeconds: 60 },
-  { value: "6h", label: "最近 6 小时", bucketSeconds: 300 },
-  { value: "24h", label: "最近 24 小时", bucketSeconds: 900 },
-  { value: "7d", label: "最近 7 天", bucketSeconds: 3600 },
-  { value: "30d", label: "最近 30 天", bucketSeconds: 21600 },
+  { value: "6h", label: "最近 6 小时", bucketSeconds: 3600 },
+  { value: "24h", label: "最近 24 小时", bucketSeconds: 3600 },
+  { value: "7d", label: "最近 7 天", bucketSeconds: 86400 },
+  { value: "30d", label: "最近 30 天", bucketSeconds: 86400 },
 ];
 
 function rangeWindow(range: RpmRangePreset): { start: Date; end: Date } {

@@ -53,8 +53,7 @@ function formatBucketLabel(iso: string, bucketSeconds: number): string {
   if (Number.isNaN(d.getTime())) return iso;
   const pad = (n: number) => n.toString().padStart(2, "0");
   const HHmm = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
-  // For buckets ≤ 2h wide we show only HH:mm; otherwise prepend MM-DD so days
-  // can be told apart on a 7d/30d chart.
+  if (bucketSeconds >= 86400) return `${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   if (bucketSeconds <= 7200) return HHmm;
   return `${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${HHmm}`;
 }
