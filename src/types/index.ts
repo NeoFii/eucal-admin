@@ -614,6 +614,19 @@ export interface UsageTrendsData {
   by_model: ModelCallStat[];
 }
 
+export interface RpmTrendPoint {
+  bucket_start: string;
+  request_count: number;
+  rpm: number;
+}
+
+export interface RpmTrendData {
+  bucket_seconds: number;
+  points: RpmTrendPoint[];
+}
+
+export type RpmRangePreset = "1h" | "6h" | "24h" | "7d" | "30d";
+
 // ── 用户用量分析 ──────────────────────────────────────────
 
 export type UsageAnalyticsRange = "8h" | "24h" | "7d" | "30d";
@@ -699,6 +712,7 @@ export interface RouteRequestListItem {
   id: number;
   request_id: string;
   user_id: number;
+  user_uid: string | null;
   api_key_id: number | null;
   model_name: string;
   selected_model: string | null;

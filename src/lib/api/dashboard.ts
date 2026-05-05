@@ -3,6 +3,7 @@ import type {
   DashboardSummary,
   UserGrowthPoint,
   UsageTrendsData,
+  RpmTrendData,
 } from "@/types";
 
 const BASE = "/api/v1/dashboard";
@@ -26,6 +27,15 @@ export const dashboardApi = {
     end: string;
   }): Promise<UsageTrendsData> => {
     const response = await apiClient.get<ApiResponse<UsageTrendsData>>(`${BASE}/usage-trends`, { params });
+    return response.data.data;
+  },
+
+  getRpmTrend: async (params: {
+    start: string;
+    end: string;
+    bucket_seconds: number;
+  }): Promise<RpmTrendData> => {
+    const response = await apiClient.get<ApiResponse<RpmTrendData>>(`${BASE}/rpm-trend`, { params });
     return response.data.data;
   },
 };

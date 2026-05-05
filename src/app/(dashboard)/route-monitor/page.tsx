@@ -268,7 +268,11 @@ export default function RouteMonitorPage() {
       {
         key: "user",
         header: "用户",
-        render: (r) => <span className="text-xs text-muted-foreground">UID {r.user_id}</span>,
+        render: (r) => (
+          <span className="font-mono text-xs text-muted-foreground">
+            {r.user_uid ?? "—"}
+          </span>
+        ),
       },
       {
         key: "models",
@@ -652,7 +656,7 @@ export default function RouteMonitorPage() {
                 <div className="rounded-2xl border border-border/80 bg-secondary/40 p-4 text-sm">
                   <p className="mb-2 text-sm font-medium">上下文</p>
                   <div className="space-y-1 text-muted-foreground">
-                    <p>用户 UID: {detail.user_id}</p>
+                    <p>用户 UID: <span className="font-mono text-foreground">{detail.user_uid ?? "—"}</span></p>
                     <p>Provider: <span className="font-mono text-foreground">{detail.provider_slug ?? "—"}</span></p>
                     <p>Upstream: <span className="font-mono text-foreground">{detail.upstream_model ?? "—"}</span></p>
                     <p>耗时: {detail.duration_ms ?? "—"}ms (↗ 上游 {detail.upstream_latency_ms ?? "—"}ms)</p>
