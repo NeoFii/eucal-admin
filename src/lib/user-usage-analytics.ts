@@ -1,12 +1,9 @@
 import type {
   UserUsageStatItem,
   UsageAnalyticsData,
-  UsageAnalyticsRange,
 } from "@/types";
 
 // ── Token trend ──────────────────────────────────────────
-
-export type TokenTrendRange = "24h" | "7d" | "30d";
 
 export interface TokenTrendViewModel {
   xAxis: string[];
@@ -19,29 +16,21 @@ const TOKEN_SERIES_NAMES = ["输入 Tokens", "输出 Tokens", "缓存 Tokens"] a
 
 export { TOKEN_COLORS, TOKEN_SERIES_NAMES };
 
-export function getTokenTrendQueryWindow(range: TokenTrendRange): { start: string; end: string } {
-  const now = new Date();
-  const end = new Date(now);
-  let start: Date;
-  if (range === "24h") {
-    start = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-  } else if (range === "7d") {
-    start = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-  } else {
-    start = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-  }
-  return { start: start.toISOString(), end: end.toISOString() };
-}
-
 export function buildTokenTrendViewModel(
   stats: UserUsageStatItem[],
-  range: TokenTrendRange,
+  start: string,
+  end: string,
 ): TokenTrendViewModel {
+  const startDate = new Date(start);
+  const endDate = new Date(end);
+  const durationMs = endDate.getTime() - startDate.getTime();
+  const isHourly = durationMs <= 48 * 60 * 60 * 1000;
+
   const bucketMap = new Map<string, { prompt: number; completion: number; cached: number }>();
 
   for (const stat of stats) {
     const d = new Date(stat.stat_hour);
-    const key = range === "24h"
+    const key = isHourly
       ? `${String(d.getHours()).padStart(2, "0")}:00`
       : `${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
@@ -52,12 +41,10 @@ export function buildTokenTrendViewModel(
     bucketMap.set(key, existing);
   }
 
-  const xAxis = generateTimeLabels(range);
+  const xAxis = generateTimeLabelsFromWindow(startDate, endDate, isHourly);
   const promptData = xAxis.map((k) => bucketMap.get(k)?.prompt ?? 0);
   const completionData = xAxis.map((k) => bucketMap.get(k)?.completion ?? 0);
   const cachedData = xAxis.map((k) => bucketMap.get(k)?.cached ?? 0);
-
-  const hasData = stats.length > 0;
 
   return {
     xAxis,
@@ -66,31 +53,29 @@ export function buildTokenTrendViewModel(
       { name: TOKEN_SERIES_NAMES[1], data: completionData },
       { name: TOKEN_SERIES_NAMES[2], data: cachedData },
     ],
-    hasData,
+    hasData: stats.length > 0,
   };
 }
 
-function generateTimeLabels(range: TokenTrendRange): string[] {
+function generateTimeLabelsFromWindow(start: Date, end: Date, isHourly: boolean): string[] {
   const labels: string[] = [];
-  const now = new Date();
-
-  if (range === "24h") {
-    const startHour = new Date(now.getTime() - 23 * 60 * 60 * 1000);
-    startHour.setMinutes(0, 0, 0);
-    for (let i = 0; i < 24; i++) {
-      const d = new Date(startHour.getTime() + i * 60 * 60 * 1000);
-      labels.push(`${String(d.getHours()).padStart(2, "0")}:00`);
+  if (isHourly) {
+    const cursor = new Date(start);
+    cursor.setMinutes(0, 0, 0);
+    while (cursor <= end) {
+      labels.push(`${String(cursor.getHours()).padStart(2, "0")}:00`);
+      cursor.setTime(cursor.getTime() + 60 * 60 * 1000);
     }
   } else {
-    const days = range === "7d" ? 7 : 30;
-    for (let i = days - 1; i >= 0; i--) {
-      const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+    const cursor = new Date(start);
+    cursor.setHours(0, 0, 0, 0);
+    while (cursor <= end) {
       labels.push(
-        `${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`,
+        `${String(cursor.getMonth() + 1).padStart(2, "0")}-${String(cursor.getDate()).padStart(2, "0")}`,
       );
+      cursor.setDate(cursor.getDate() + 1);
     }
   }
-
   return labels;
 }
 
