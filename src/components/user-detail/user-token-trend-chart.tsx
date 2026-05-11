@@ -12,7 +12,7 @@ import {
   TOKEN_COLORS,
   type TokenTrendRange,
 } from "@/lib/user-usage-analytics";
-import type { UserUsageStatItem } from "@/types";
+import type { UserUsageStatItem, UserApiKeyItem } from "@/types";
 
 const ReactECharts = dynamic(() => import("echarts-for-react"), { ssr: false });
 
@@ -24,10 +24,12 @@ const RANGE_TABS = [
 
 interface Props {
   uid: string;
+  apiKeys?: UserApiKeyItem[];
 }
 
-export function UserTokenTrendChart({ uid }: Props) {
+export function UserTokenTrendChart({ uid, apiKeys = [] }: Props) {
   const [range, setRange] = useState<TokenTrendRange>("24h");
+  const [selectedKeyId, setSelectedKeyId] = useState<number | undefined>(undefined);
   const [stats, setStats] = useState<UserUsageStatItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -35,14 +37,18 @@ export function UserTokenTrendChart({ uid }: Props) {
     setLoading(true);
     try {
       const { start, end } = getTokenTrendQueryWindow(range);
-      const data = await userManagementApi.getUserUsageStats(uid, { start, end });
+      const data = await userManagementApi.getUserUsageStats(uid, {
+        start,
+        end,
+        api_key_id: selectedKeyId,
+      });
       setStats(data);
     } catch {
       setStats([]);
     } finally {
       setLoading(false);
     }
-  }, [uid, range]);
+  }, [uid, range, selectedKeyId]);
 
   useEffect(() => { void loadData(); }, [loadData]);
 
@@ -101,7 +107,25 @@ export function UserTokenTrendChart({ uid }: Props) {
       onTabChange={(k) => setRange(k as TokenTrendRange)}
       loading={loading}
     >
-      <ReactECharts option={option} style={{ height: "100%", width: "100%" }} />
+      <div className="flex flex-col h-full">
+        {apiKeys.length > 0 && (
+          <div className="flex items-center gap-2 px-1 pb-2">
+            <select
+              className="h-7 rounded-md border border-gray-200 px-2 text-xs"
+              value={selectedKeyId ?? ""}
+              onChange={(e) => setSelectedKeyId(e.target.value ? Number(e.target.value) : undefined)}
+            >
+              <option value="">全部 Key</option>
+              {apiKeys.map((k) => (
+                <option key={k.id} value={k.id}>{k.name} ({k.key_prefix}...)</option>
+              ))}
+            </select>
+          </div>
+        )}
+        <div className="flex-1 min-h-0">
+          <ReactECharts option={option} style={{ height: "100%", width: "100%" }} />
+        </div>
+      </div>
     </ChartCard>
   );
 }

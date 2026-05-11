@@ -101,13 +101,20 @@ export const userManagementApi = {
   getUserUsageStats: async (uid: string, params?: {
     start?: string;
     end?: string;
+    model_name?: string;
+    api_key_id?: number;
   }): Promise<UserUsageStatItem[]> => {
     const response = await apiClient.get<ApiResponse<UserUsageStatItem[]>>(`${BASE}/${uid}/usage/stats`, { params });
     return response.data.data;
   },
 
-  getUserUsageAnalytics: async (uid: string, range: UsageAnalyticsRange = "24h"): Promise<UsageAnalyticsData> => {
-    const response = await apiClient.get<ApiResponse<UsageAnalyticsData>>(`${BASE}/${uid}/usage/analytics`, { params: { range } });
+  getUserUsageAnalytics: async (uid: string, params?: {
+    range?: UsageAnalyticsRange;
+    start?: string;
+    end?: string;
+    api_key_id?: number;
+  }): Promise<UsageAnalyticsData> => {
+    const response = await apiClient.get<ApiResponse<UsageAnalyticsData>>(`${BASE}/${uid}/usage/analytics`, { params });
     return response.data.data;
   },
 };

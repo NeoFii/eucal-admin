@@ -657,7 +657,7 @@ export interface UsageAnalyticsBucket {
 }
 
 export interface UsageAnalyticsData {
-  range: UsageAnalyticsRange;
+  range: string | null;
   granularity: string;
   start: string;
   end: string;

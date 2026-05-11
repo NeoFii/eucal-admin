@@ -116,8 +116,8 @@ export default function UserDetailPage() {
   }, [isValidUid, uid]);
 
   useEffect(() => { void loadDetail(); }, [loadDetail]);
+  useEffect(() => { if (isValidUid) void loadApiKeys(); }, [isValidUid, loadApiKeys]);
   useEffect(() => { if (isValidUid && tab === "transactions") void loadTransactions(); }, [isValidUid, tab, loadTransactions]);
-  useEffect(() => { if (isValidUid && tab === "apikeys") void loadApiKeys(); }, [isValidUid, tab, loadApiKeys]);
 
   /* ── action handlers (unchanged logic) ── */
   const handleToggleStatus = async () => {
@@ -287,8 +287,8 @@ export default function UserDetailPage() {
 
       {/* ── Charts ── */}
       <div className="grid gap-4 lg:grid-cols-2">
-        <UserTokenTrendChart uid={uid} />
-        <UserSpendingChart uid={uid} />
+        <UserTokenTrendChart uid={uid} apiKeys={apiKeys} />
+        <UserSpendingChart uid={uid} apiKeys={apiKeys} />
       </div>
 
       {/* ── Data tabs ── */}
