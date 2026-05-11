@@ -37,7 +37,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
 import { userManagementApi } from "@/lib/api/user-management";
 import { getErrorDetail } from "@/lib/errors";
-import { formatShanghaiDateTime } from "@/lib/time";
+import { formatShanghaiDateTime, formatShanghaiDateTimeLocalInput } from "@/lib/time";
 import { formatYuan, formatYuanDetail, yuanToMicroYuan } from "@/lib/pricing";
 import { UserBalanceCards } from "@/components/user-detail/user-balance-cards";
 import { UserTokenTrendChart } from "@/components/user-detail/user-token-trend-chart";
@@ -90,6 +90,13 @@ export default function UserDetailPage() {
   const [rpmOpen, setRpmOpen] = useState(false);
   const [rpmValue, setRpmValue] = useState("");
   const [rpmRemark, setRpmRemark] = useState("");
+
+  const [chartStart, setChartStart] = useState(() => {
+    const d = new Date(); d.setHours(0, 0, 0, 0);
+    return formatShanghaiDateTimeLocalInput(d);
+  });
+  const [chartEnd, setChartEnd] = useState(() => formatShanghaiDateTimeLocalInput());
+  const [chartKeyId, setChartKeyId] = useState<number | undefined>(undefined);
 
   const loadDetail = useCallback(async () => {
     if (!isValidUid) { setDetail(null); setLoadingDetail(false); return; }
@@ -286,9 +293,38 @@ export default function UserDetailPage() {
       <UserBalanceCards detail={detail} />
 
       {/* ── Charts ── */}
-      <div className="grid gap-4 lg:grid-cols-2">
-        <UserTokenTrendChart uid={uid} apiKeys={apiKeys} />
-        <UserSpendingChart uid={uid} apiKeys={apiKeys} />
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-center gap-3 rounded-lg border border-gray-100 bg-white px-4 py-3 shadow-sm">
+          <input
+            type="datetime-local"
+            className="h-8 rounded-md border border-gray-200 px-2 text-sm"
+            value={chartStart}
+            onChange={(e) => setChartStart(e.target.value)}
+          />
+          <span className="text-sm text-muted-foreground">至</span>
+          <input
+            type="datetime-local"
+            className="h-8 rounded-md border border-gray-200 px-2 text-sm"
+            value={chartEnd}
+            onChange={(e) => setChartEnd(e.target.value)}
+          />
+          {apiKeys.length > 0 && (
+            <select
+              className="h-8 rounded-md border border-gray-200 px-2 text-sm"
+              value={chartKeyId ?? ""}
+              onChange={(e) => setChartKeyId(e.target.value ? Number(e.target.value) : undefined)}
+            >
+              <option value="">全部 Key</option>
+              {apiKeys.map((k) => (
+                <option key={k.id} value={k.id}>{k.name} ({k.key_prefix}...)</option>
+              ))}
+            </select>
+          )}
+        </div>
+        <div className="grid gap-4 lg:grid-cols-2">
+          <UserTokenTrendChart uid={uid} startTime={chartStart} endTime={chartEnd} selectedKeyId={chartKeyId} />
+          <UserSpendingChart uid={uid} startTime={chartStart} endTime={chartEnd} selectedKeyId={chartKeyId} />
+        </div>
       </div>
 
       {/* ── Data tabs ── */}
