@@ -78,7 +78,7 @@ export const userManagementApi = {
   getUsageLogs: async (params?: {
     page?: number;
     page_size?: number;
-    user_id?: number;
+    user_uid?: string;
     model_name?: string;
     request_id?: string;
     start?: string;
@@ -89,7 +89,7 @@ export const userManagementApi = {
   },
 
   getUsageStats: async (params?: {
-    user_id?: number;
+    user_uid?: string;
     model_name?: string;
     start?: string;
     end?: string;

@@ -338,9 +338,9 @@ export interface UserTransactionItem {
 
 export interface UserUsageLogItem {
   id: number;
-  user_id: number;
   request_id: string;
   api_key_id: number | null;
+  api_key_name: string | null;
   model_name: string;
   selected_model: string | null;
   provider_slug: string | null;
@@ -363,7 +363,6 @@ export interface UserUsageLogItem {
 
 export interface UserUsageStatItem {
   id: number;
-  user_id: number;
   api_key_id: number | null;
   model_name: string;
   stat_hour: string;
@@ -675,7 +674,7 @@ export interface UsageAnalyticsData {
 export interface RouteRequestListParams {
   page?: number;
   page_size?: number;
-  user_id?: number;
+  user_uid?: string;
   model_name?: string;
   selected_model?: string;
   provider_slug?: string;
@@ -692,7 +691,7 @@ export interface RouteRequestListParams {
 export interface RouteAggregateParams {
   start?: string;
   end?: string;
-  user_id?: number;
+  user_uid?: string;
   model_name?: string;
   provider_slug?: string;
 }
@@ -714,7 +713,6 @@ export interface RequestPreview {
 export interface RouteRequestListItem {
   id: number;
   request_id: string;
-  user_id: number;
   user_uid: string | null;
   api_key_id: number | null;
   model_name: string;
