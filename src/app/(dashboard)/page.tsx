@@ -278,7 +278,7 @@ export default function DashboardPage() {
         </ChartCard>
 
         <ChartCard
-          title="成功/错误率"
+          title="调用状态"
           tabs={[
             { key: "trend", label: "趋势" },
             { key: "rate", label: "成功率" },

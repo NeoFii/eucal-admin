@@ -20,8 +20,9 @@ export function SuccessRateChart({ daily, activeTab }: Props) {
 
     if (activeTab === "rate") {
       const rates = items.map((d) => {
-        const total = d.success_count + d.error_count;
-        return total > 0 ? +((d.success_count / total) * 100).toFixed(2) : 100;
+        return d.request_count > 0
+          ? +((d.success_count / d.request_count) * 100).toFixed(2)
+          : 100;
       });
 
       return mergeChartOption({
@@ -89,7 +90,7 @@ export function SuccessRateChart({ daily, activeTab }: Props) {
           "box-shadow: 0 4px 12px rgba(0,0,0,0.08); border-radius: 12px;",
       },
       legend: {
-        data: ["成功", "错误"],
+        data: ["成功", "错误", "待处理", "已退款", "已中止"],
         top: 8,
         right: 16,
         textStyle: { color: "#6b7280", fontSize: 12 },
@@ -125,6 +126,36 @@ export function SuccessRateChart({ daily, activeTab }: Props) {
           symbol: "circle",
           symbolSize: 5,
           itemStyle: { color: chartColors[5] },
+          lineStyle: { width: 2 },
+        },
+        {
+          name: "待处理",
+          type: "line",
+          data: items.map((d) => d.pending_count),
+          smooth: true,
+          symbol: "circle",
+          symbolSize: 5,
+          itemStyle: { color: chartColors[1] },
+          lineStyle: { width: 2 },
+        },
+        {
+          name: "已退款",
+          type: "line",
+          data: items.map((d) => d.refunded_count),
+          smooth: true,
+          symbol: "circle",
+          symbolSize: 5,
+          itemStyle: { color: chartColors[6] },
+          lineStyle: { width: 2 },
+        },
+        {
+          name: "已中止",
+          type: "line",
+          data: items.map((d) => d.aborted_count),
+          smooth: true,
+          symbol: "circle",
+          symbolSize: 5,
+          itemStyle: { color: chartColors[2] },
           lineStyle: { width: 2 },
         },
       ],
