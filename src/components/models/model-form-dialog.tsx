@@ -45,6 +45,7 @@ const emptyForm = (vendorSlug: string): SupportedModelCreate => ({
 interface PriceFormState {
   input: string;
   output: string;
+  cached: string;
 }
 
 interface ModelFormDialogProps {
@@ -71,7 +72,7 @@ export function ModelFormDialog({
   const [form, setForm] = useState<SupportedModelCreate>(emptyForm(fixedVendor.slug));
   const [tagsInput, setTagsInput] = useState("");
   const [selectedCategoryKeys, setSelectedCategoryKeys] = useState<Set<string>>(new Set());
-  const [priceForm, setPriceForm] = useState<PriceFormState>({ input: "", output: "" });
+  const [priceForm, setPriceForm] = useState<PriceFormState>({ input: "", output: "", cached: "" });
   const [routingSlugOpen, setRoutingSlugOpen] = useState(false);
   const routingSlugRef = useRef<HTMLDivElement>(null);
 
@@ -112,6 +113,7 @@ export function ModelFormDialog({
       setPriceForm({
         input: model.price_input_per_m_fen != null ? microYuanToYuan(model.price_input_per_m_fen) : "",
         output: model.price_output_per_m_fen != null ? microYuanToYuan(model.price_output_per_m_fen) : "",
+        cached: model.price_cached_input_per_m_fen != null ? microYuanToYuan(model.price_cached_input_per_m_fen) : "",
       });
       setTagsInput(model.capability_tags.join(", "));
       setSelectedCategoryKeys(new Set(model.categories.map((c) => c.key)));
@@ -119,7 +121,7 @@ export function ModelFormDialog({
     }
 
     setForm(emptyForm(fixedVendor.slug));
-    setPriceForm({ input: "", output: "" });
+    setPriceForm({ input: "", output: "", cached: "" });
     setTagsInput("");
     setSelectedCategoryKeys(new Set());
   }, [fixedVendor.slug, model, open]);
@@ -147,6 +149,7 @@ export function ModelFormDialog({
       description: form.description?.trim() || undefined,
       price_input_per_m_fen: priceForm.input ? yuanToMicroYuan(priceForm.input) : undefined,
       price_output_per_m_fen: priceForm.output ? yuanToMicroYuan(priceForm.output) : undefined,
+      price_cached_input_per_m_fen: priceForm.cached ? yuanToMicroYuan(priceForm.cached) : undefined,
       capability_tags: tagsInput
         .split(",")
         .map((tag) => tag.trim())
@@ -272,7 +275,7 @@ export function ModelFormDialog({
             />
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-4 sm:grid-cols-3">
             <div>
               <label className="mb-1 block text-sm font-medium text-foreground">输入价格(元/百万token)</label>
               <Input
@@ -293,6 +296,17 @@ export function ModelFormDialog({
                 value={priceForm.output}
                 onChange={(event) => setPriceForm((c) => ({ ...c, output: event.target.value }))}
                 placeholder="例如：6.00"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-foreground">缓存价格(元/百万token)</label>
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                value={priceForm.cached}
+                onChange={(event) => setPriceForm((c) => ({ ...c, cached: event.target.value }))}
+                placeholder="例如：0.75"
               />
             </div>
           </div>

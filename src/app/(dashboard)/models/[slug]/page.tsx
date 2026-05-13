@@ -21,6 +21,7 @@ import {
   ArrowDownToLine,
   ArrowLeft,
   ArrowUpFromLine,
+  Database,
   Edit3,
   Layers,
   MessageSquare,
@@ -224,7 +225,7 @@ export default function ModelDetailPage() {
       </div>
 
       {/* 关键信息卡片 */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
         <div className="stat-gradient-blue relative overflow-hidden rounded-xl p-5">
           <Layers className="absolute right-3 top-3 h-8 w-8 text-blue-200/60" />
           <div className="text-xs font-medium text-blue-600/80 mb-1">上下文窗口</div>
@@ -243,6 +244,13 @@ export default function ModelDetailPage() {
           <div className="text-xs font-medium text-violet-600/80 mb-1">每百万输出价格</div>
           <div className="text-3xl font-bold tabular-nums text-violet-900">
             {model.price_output_per_m_fen != null ? formatFenPerMillionTokens(model.price_output_per_m_fen) : "待配置"}
+          </div>
+        </div>
+        <div className="stat-gradient-cyan relative overflow-hidden rounded-xl p-5">
+          <Database className="absolute right-3 top-3 h-8 w-8 text-cyan-200/60" />
+          <div className="text-xs font-medium text-cyan-600/80 mb-1">每百万缓存价格</div>
+          <div className="text-3xl font-bold tabular-nums text-cyan-900">
+            {model.price_cached_input_per_m_fen != null ? formatFenPerMillionTokens(model.price_cached_input_per_m_fen) : "待配置"}
           </div>
         </div>
       </div>
