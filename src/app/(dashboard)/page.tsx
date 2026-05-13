@@ -281,7 +281,7 @@ export default function DashboardPage() {
           title="调用状态"
           tabs={[
             { key: "trend", label: "趋势" },
-            { key: "rate", label: "成功率" },
+            { key: "rate", label: "成功率/失败率" },
           ]}
           activeTab={rateTab}
           onTabChange={setRateTab}

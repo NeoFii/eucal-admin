@@ -20,9 +20,16 @@ export function SuccessRateChart({ daily, activeTab }: Props) {
 
     if (activeTab === "rate") {
       const rates = items.map((d) => {
-        return d.request_count > 0
-          ? +((d.success_count / d.request_count) * 100).toFixed(2)
+        const total = d.success_count + d.error_count;
+        return total > 0
+          ? +((d.success_count / total) * 100).toFixed(2)
           : 100;
+      });
+      const errorRates = items.map((d) => {
+        const total = d.success_count + d.error_count;
+        return total > 0
+          ? +((d.error_count / total) * 100).toFixed(2)
+          : 0;
       });
 
       return mergeChartOption({
@@ -54,6 +61,12 @@ export function SuccessRateChart({ daily, activeTab }: Props) {
             formatter: (v: number) => `${v}%`,
           },
         },
+        legend: {
+          data: ["成功率", "失败率"],
+          top: 8,
+          right: 16,
+          textStyle: { color: "#6b7280", fontSize: 12 },
+        },
         series: [
           {
             name: "成功率",
@@ -75,6 +88,26 @@ export function SuccessRateChart({ daily, activeTab }: Props) {
               },
             },
           },
+          {
+            name: "失败率",
+            type: "line",
+            data: errorRates,
+            smooth: true,
+            symbol: "circle",
+            symbolSize: 6,
+            itemStyle: { color: chartColors[5] },
+            lineStyle: { width: 2.5 },
+            areaStyle: {
+              color: {
+                type: "linear",
+                x: 0, y: 0, x2: 0, y2: 1,
+                colorStops: [
+                  { offset: 0, color: "rgba(239,68,68,0.10)" },
+                  { offset: 1, color: "rgba(255,255,255,0)" },
+                ],
+              },
+            },
+          },
         ],
       });
     }
@@ -90,7 +123,7 @@ export function SuccessRateChart({ daily, activeTab }: Props) {
           "box-shadow: 0 4px 12px rgba(0,0,0,0.08); border-radius: 12px;",
       },
       legend: {
-        data: ["成功", "错误", "待处理", "已退款", "已中止"],
+        data: ["成功", "失败"],
         top: 8,
         right: 16,
         textStyle: { color: "#6b7280", fontSize: 12 },
@@ -119,43 +152,13 @@ export function SuccessRateChart({ daily, activeTab }: Props) {
           lineStyle: { width: 2 },
         },
         {
-          name: "错误",
+          name: "失败",
           type: "line",
           data: items.map((d) => d.error_count),
           smooth: true,
           symbol: "circle",
           symbolSize: 5,
           itemStyle: { color: chartColors[5] },
-          lineStyle: { width: 2 },
-        },
-        {
-          name: "待处理",
-          type: "line",
-          data: items.map((d) => d.pending_count),
-          smooth: true,
-          symbol: "circle",
-          symbolSize: 5,
-          itemStyle: { color: chartColors[1] },
-          lineStyle: { width: 2 },
-        },
-        {
-          name: "已退款",
-          type: "line",
-          data: items.map((d) => d.refunded_count),
-          smooth: true,
-          symbol: "circle",
-          symbolSize: 5,
-          itemStyle: { color: chartColors[6] },
-          lineStyle: { width: 2 },
-        },
-        {
-          name: "已中止",
-          type: "line",
-          data: items.map((d) => d.aborted_count),
-          smooth: true,
-          symbol: "circle",
-          symbolSize: 5,
-          itemStyle: { color: chartColors[2] },
           lineStyle: { width: 2 },
         },
       ],
