@@ -211,7 +211,7 @@ export function RpmLineChart({ points, bucketSeconds }: Props) {
               x2: 0,
               y2: 1,
               colorStops: [
-                { offset: 0, color: "rgba(6,182,212,0.20)" },
+                { offset: 0, color: "rgba(139,92,246,0.20)" },
                 { offset: 1, color: "rgba(255,255,255,0)" },
               ],
             },

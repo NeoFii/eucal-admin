@@ -55,7 +55,7 @@ export function UserGrowthChart({ data, activeTab }: Props) {
               type: "linear",
               x: 0, y: 0, x2: 0, y2: 1,
               colorStops: [
-                { offset: 0, color: isNew ? "rgba(37,99,235,0.15)" : "rgba(99,102,241,0.15)" },
+                { offset: 0, color: "rgba(37,99,235,0.15)" },
                 { offset: 1, color: "rgba(255,255,255,0)" },
               ],
             },

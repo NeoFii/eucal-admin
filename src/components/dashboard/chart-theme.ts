@@ -1,8 +1,8 @@
 import type { EChartsOption } from "echarts";
 
 const COLORS = [
-  "#2563eb", "#6366f1", "#06b6d4", "#10b981", "#f59e0b",
-  "#ef4444", "#8b5cf6", "#ec4899", "#14b8a6", "#f97316",
+  "#2563eb", "#f97316", "#8b5cf6", "#10b981", "#eab308",
+  "#ef4444", "#06b6d4", "#ec4899", "#854d0e", "#65a30d",
 ];
 
 export const chartColors = COLORS;

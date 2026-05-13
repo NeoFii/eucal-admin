@@ -57,7 +57,7 @@ function TrendChart({ daily }: { daily: DailyUsageTrend[] }) {
                 type: "linear",
                 x: 0, y: 0, x2: 0, y2: 1,
                 colorStops: [
-                  { offset: 0, color: "rgba(99,102,241,0.15)" },
+                  { offset: 0, color: "rgba(249,115,22,0.15)" },
                   { offset: 1, color: "rgba(255,255,255,0)" },
                 ],
               },
@@ -163,7 +163,7 @@ function ModelChart({ byModel }: { byModel: ModelCallStat[] }) {
           {showPie ? <BarChart3 className="h-4 w-4" /> : <PieChart className="h-4 w-4" />}
         </Button>
       </div>
-      <ReactECharts option={showPie ? pieOption : barOption} style={{ height: "100%" }} />
+      <ReactECharts option={showPie ? pieOption : barOption} style={{ height: "100%" }} notMerge />
     </div>
   );
 }

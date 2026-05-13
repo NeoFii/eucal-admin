@@ -88,8 +88,8 @@ export function formatTokenAxisValue(value: number): string {
 // ── Spending chart ───────────────────────────────────────
 
 const MODEL_COLORS = [
-  "#2563eb", "#6366f1", "#06b6d4", "#10b981", "#f59e0b",
-  "#ef4444", "#8b5cf6", "#ec4899",
+  "#2563eb", "#f97316", "#8b5cf6", "#10b981", "#eab308",
+  "#ef4444", "#06b6d4", "#ec4899",
 ];
 const OTHER_COLOR = "#94a3b8";
 const MAX_MODELS = 8;
