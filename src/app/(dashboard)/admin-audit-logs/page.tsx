@@ -35,94 +35,16 @@ import { Label } from "@/components/ui/label";
 import { adminAuditLogsApi } from "@/lib/api/admin-audit-logs";
 import { formatShanghaiDateTime } from "@/lib/time";
 import { useAuthStore } from "@/stores/auth";
-import type { AdminAuditCategory, AdminAuditLogItem } from "@/types";
-
-const AUDIT_GOVERNANCE_ACTION_OPTIONS = [
-  { value: "bootstrap_super_admin", label: "初始化超级管理员" },
-  { value: "create_admin", label: "创建管理员" },
-  { value: "enable_admin", label: "启用管理员" },
-  { value: "disable_admin", label: "禁用管理员" },
-  { value: "reset_admin_password", label: "重置密码" },
-  { value: "update_admin_role", label: "修改管理员角色" },
-];
-
-const AUDIT_AUTH_ACTION_OPTIONS = [
-  { value: "admin_login_success", label: "管理员登录成功" },
-  { value: "admin_login_failed", label: "管理员登录失败" },
-  { value: "admin_login_locked", label: "管理员账号锁定" },
-  { value: "admin_login_unlocked", label: "管理员账号解锁" },
-];
-
-const AUDIT_USER_MANAGEMENT_ACTION_OPTIONS = [
-  { value: "enable_user", label: "启用用户" },
-  { value: "disable_user", label: "禁用用户" },
-  { value: "reset_user_password", label: "重置用户密码" },
-  { value: "topup_user", label: "用户充值" },
-  { value: "adjust_user_balance", label: "调整用户余额" },
-  { value: "disable_user_api_key", label: "禁用用户 API Key" },
-];
-
-const AUDIT_MODEL_CATALOG_ACTION_OPTIONS = [
-  { value: "create_vendor", label: "创建研发商" },
-  { value: "update_vendor", label: "更新研发商" },
-  { value: "create_category", label: "创建分类" },
-  { value: "update_category", label: "更新分类" },
-  { value: "create_model", label: "创建模型" },
-  { value: "update_model", label: "更新模型" },
-  { value: "delete_model", label: "删除模型" },
-];
-
-const AUDIT_ROUTING_CONFIG_ACTION_OPTIONS = [
-  { value: "create_credential", label: "创建凭证" },
-  { value: "update_credential", label: "更新凭证" },
-  { value: "delete_credential", label: "删除凭证" },
-  { value: "create_routing_version", label: "创建路由版本" },
-  { value: "update_routing_version", label: "更新路由版本" },
-  { value: "publish_routing_version", label: "发布路由版本" },
-  { value: "rollback_routing_version", label: "回滚路由版本" },
-];
+import type { AdminAuditCategory, AdminAuditLogItem, AdminAuditLogMetaData } from "@/types";
 
 const AUDIT_CATEGORY_OPTIONS: Array<{ value: AdminAuditCategory; label: string; icon: typeof Shield; activeClass: string }> = [
+  { value: "all", label: "全部事件", icon: List, activeClass: "bg-gray-900 text-white hover:bg-gray-800" },
   { value: "governance", label: "治理动作", icon: Shield, activeClass: "bg-blue-600 text-white hover:bg-blue-700" },
   { value: "auth", label: "认证事件", icon: Lock, activeClass: "bg-amber-600 text-white hover:bg-amber-700" },
   { value: "user_management", label: "用户管理", icon: Users, activeClass: "bg-purple-600 text-white hover:bg-purple-700" },
   { value: "model_catalog", label: "模型目录", icon: Database, activeClass: "bg-teal-600 text-white hover:bg-teal-700" },
   { value: "routing_config", label: "路由配置", icon: Settings, activeClass: "bg-cyan-600 text-white hover:bg-cyan-700" },
-  { value: "all", label: "全部事件", icon: List, activeClass: "bg-gray-900 text-white hover:bg-gray-800" },
 ];
-
-const AUDIT_ACTION_LABELS: Record<string, string> = {
-  bootstrap_super_admin: "初始化超级管理员",
-  create_admin: "创建管理员",
-  enable_admin: "启用管理员",
-  disable_admin: "禁用管理员",
-  reset_admin_password: "重置密码",
-  update_admin_role: "修改管理员角色",
-  admin_login_success: "管理员登录成功",
-  admin_login_failed: "管理员登录失败",
-  admin_login_locked: "管理员账号锁定",
-  admin_login_unlocked: "管理员账号解锁",
-  enable_user: "启用用户",
-  disable_user: "禁用用户",
-  reset_user_password: "重置用户密码",
-  topup_user: "用户充值",
-  adjust_user_balance: "调整用户余额",
-  disable_user_api_key: "禁用用户 API Key",
-  create_vendor: "创建研发商",
-  update_vendor: "更新研发商",
-  create_category: "创建分类",
-  update_category: "更新分类",
-  create_model: "创建模型",
-  update_model: "更新模型",
-  delete_model: "删除模型",
-  create_credential: "创建凭证",
-  update_credential: "更新凭证",
-  delete_credential: "删除凭证",
-  create_routing_version: "创建路由版本",
-  update_routing_version: "更新路由版本",
-  publish_routing_version: "发布路由版本",
-  rollback_routing_version: "回滚路由版本",
-};
 
 const AUDIT_CATEGORY_LABELS: Record<AdminAuditCategory, string> = {
   all: "全部事件",
@@ -131,6 +53,8 @@ const AUDIT_CATEGORY_LABELS: Record<AdminAuditCategory, string> = {
   user_management: "用户管理",
   model_catalog: "模型目录",
   routing_config: "路由配置",
+  voucher: "兑换码",
+  pool: "资源池",
 };
 
 const AUDIT_CATEGORY_HINTS: Record<AdminAuditCategory, string> = {
@@ -140,43 +64,39 @@ const AUDIT_CATEGORY_HINTS: Record<AdminAuditCategory, string> = {
   user_management: "查看用户启用/禁用、密码重置、充值等管理操作。",
   model_catalog: "查看研发商、分类、模型的创建和更新操作。",
   routing_config: "查看凭证管理和路由配置版本的变更操作。",
+  voucher: "查看兑换码生成和禁用等操作。",
+  pool: "查看资源池创建、模型和账号管理等操作。",
 };
 
-const AUDIT_GOVERNANCE_ACTIONS = new Set(AUDIT_GOVERNANCE_ACTION_OPTIONS.map((option) => option.value));
-const AUDIT_AUTH_ACTIONS = new Set(AUDIT_AUTH_ACTION_OPTIONS.map((option) => option.value));
-const AUDIT_USER_MANAGEMENT_ACTIONS = new Set(AUDIT_USER_MANAGEMENT_ACTION_OPTIONS.map((option) => option.value));
-const AUDIT_MODEL_CATALOG_ACTIONS = new Set(AUDIT_MODEL_CATALOG_ACTION_OPTIONS.map((option) => option.value));
-const AUDIT_ROUTING_CONFIG_ACTIONS = new Set(AUDIT_ROUTING_CONFIG_ACTION_OPTIONS.map((option) => option.value));
-
 function getAuditCategory(value: string | null): AdminAuditCategory {
-  if (value === "all" || value === "auth" || value === "governance" || value === "user_management" || value === "model_catalog" || value === "routing_config") {
+  if (value === "all" || value === "auth" || value === "governance" || value === "user_management" || value === "model_catalog" || value === "routing_config" || value === "voucher" || value === "pool") {
     return value;
   }
-  return "governance";
+  return "all";
 }
 
-function getAuditActionOptions(category: AdminAuditCategory) {
-  if (category === "governance") return [{ value: "", label: "全部治理动作" }, ...AUDIT_GOVERNANCE_ACTION_OPTIONS];
-  if (category === "auth") return [{ value: "", label: "全部认证事件" }, ...AUDIT_AUTH_ACTION_OPTIONS];
-  if (category === "user_management") return [{ value: "", label: "全部用户管理" }, ...AUDIT_USER_MANAGEMENT_ACTION_OPTIONS];
-  if (category === "model_catalog") return [{ value: "", label: "全部模型目录" }, ...AUDIT_MODEL_CATALOG_ACTION_OPTIONS];
-  if (category === "routing_config") return [{ value: "", label: "全部路由配置" }, ...AUDIT_ROUTING_CONFIG_ACTION_OPTIONS];
-  return [{ value: "", label: "全部动作" }, ...AUDIT_GOVERNANCE_ACTION_OPTIONS, ...AUDIT_AUTH_ACTION_OPTIONS, ...AUDIT_USER_MANAGEMENT_ACTION_OPTIONS, ...AUDIT_MODEL_CATALOG_ACTION_OPTIONS, ...AUDIT_ROUTING_CONFIG_ACTION_OPTIONS];
-}
-
-function isAuditActionAllowed(category: AdminAuditCategory, action: string) {
-  if (!action) {
-    return true;
+function getAuditActionOptions(category: AdminAuditCategory, meta: AdminAuditLogMetaData | null) {
+  if (!meta) return [{ value: "", label: "全部动作" }];
+  const allLabel = category === "all" ? "全部动作" : `全部${AUDIT_CATEGORY_LABELS[category]}`;
+  if (category === "all") {
+    const allActions = Object.entries(meta.action_labels).map(([code, label]) => ({ value: code, label }));
+    return [{ value: "", label: allLabel }, ...allActions];
   }
-  return getAuditActionOptions(category).some((option) => option.value === action);
+  const codes = meta.category_actions[category] ?? [];
+  const options = codes.map((code) => ({ value: code, label: meta.action_labels[code] ?? code }));
+  return [{ value: "", label: allLabel }, ...options];
 }
 
-function getAuditLogCategory(action: string): AdminAuditCategory {
-  if (AUDIT_GOVERNANCE_ACTIONS.has(action)) return "governance";
-  if (AUDIT_AUTH_ACTIONS.has(action)) return "auth";
-  if (AUDIT_USER_MANAGEMENT_ACTIONS.has(action)) return "user_management";
-  if (AUDIT_MODEL_CATALOG_ACTIONS.has(action)) return "model_catalog";
-  if (AUDIT_ROUTING_CONFIG_ACTIONS.has(action)) return "routing_config";
+function isAuditActionAllowed(category: AdminAuditCategory, action: string, meta: AdminAuditLogMetaData | null) {
+  if (!action) return true;
+  return getAuditActionOptions(category, meta).some((option) => option.value === action);
+}
+
+function getAuditLogCategory(action: string, meta: AdminAuditLogMetaData | null): AdminAuditCategory {
+  if (!meta) return "all";
+  for (const [cat, codes] of Object.entries(meta.category_actions)) {
+    if (codes.includes(action)) return cat as AdminAuditCategory;
+  }
   return "all";
 }
 
@@ -186,6 +106,8 @@ function getAuditCategoryBadgeClass(category: AdminAuditCategory) {
   if (category === "user_management") return "border-purple-200 bg-purple-50 text-purple-700";
   if (category === "model_catalog") return "border-teal-200 bg-teal-50 text-teal-700";
   if (category === "routing_config") return "border-cyan-200 bg-cyan-50 text-cyan-700";
+  if (category === "voucher") return "border-orange-200 bg-orange-50 text-orange-700";
+  if (category === "pool") return "border-indigo-200 bg-indigo-50 text-indigo-700";
   return "border-border bg-secondary text-secondary-foreground";
 }
 
@@ -195,6 +117,8 @@ function getAuditEmptyDescription(category: AdminAuditCategory) {
   if (category === "user_management") return "当前筛选条件下没有用户管理操作。";
   if (category === "model_catalog") return "当前筛选条件下没有模型目录操作。";
   if (category === "routing_config") return "当前筛选条件下没有路由配置操作。";
+  if (category === "voucher") return "当前筛选条件下没有兑换码操作。";
+  if (category === "pool") return "当前筛选条件下没有资源池操作。";
   return "当前筛选条件下没有管理员审计记录。";
 }
 
@@ -232,6 +156,7 @@ export default function AdminAuditLogsPage() {
   const [page, setPage] = useState(1);
   const [pageSize] = useState(10);
   const [loading, setLoading] = useState(true);
+  const [meta, setMeta] = useState<AdminAuditLogMetaData | null>(null);
 
   const [category, setCategory] = useState<AdminAuditCategory>(() => getAuditCategory(searchParams.get("category")));
   const [action, setAction] = useState("");
@@ -246,14 +171,14 @@ export default function AdminAuditLogsPage() {
       key: "action",
       header: "动作",
       render: (log) => {
-        const logCategory = getAuditLogCategory(log.action);
+        const logCategory = getAuditLogCategory(log.action, meta);
         const success = log.status === "success";
         return (
           <div className="flex items-center gap-2">
             <div className={`h-full w-0.5 self-stretch rounded-full ${success ? "bg-emerald-400" : "bg-red-400"}`} />
             <div className="flex flex-col gap-1.5">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="font-medium text-foreground">{AUDIT_ACTION_LABELS[log.action] ?? log.action}</span>
+                <span className="font-medium text-foreground">{log.action_label}</span>
                 <span className={`inline-flex items-center whitespace-nowrap rounded-full border px-2.5 py-0.5 text-[11px] font-medium ${getAuditCategoryBadgeClass(logCategory)}`}>
                   {AUDIT_CATEGORY_LABELS[logCategory]}
                 </span>
@@ -302,12 +227,17 @@ export default function AdminAuditLogsPage() {
         </Button>
       ),
     },
-  ], []);
+  ], [meta]);
 
   useEffect(() => {
     const nextCategory = getAuditCategory(searchParams.get("category"));
     setCategory((currentCategory) => (currentCategory === nextCategory ? currentCategory : nextCategory));
   }, [searchParams]);
+
+  useEffect(() => {
+    if (!isSuperAdmin) return;
+    adminAuditLogsApi.meta().then(setMeta).catch(console.error);
+  }, [isSuperAdmin]);
 
   const replaceCategoryInUrl = useCallback(
     (nextCategory: AdminAuditCategory) => {
@@ -350,10 +280,10 @@ export default function AdminAuditLogsPage() {
     fetchLogs();
   }, [fetchLogs]);
 
-  const actionOptions = useMemo(() => getAuditActionOptions(category), [category]);
+  const actionOptions = useMemo(() => getAuditActionOptions(category, meta), [category, meta]);
 
   const handleCategoryChange = (nextCategory: AdminAuditCategory) => {
-    const nextAction = isAuditActionAllowed(nextCategory, action) ? action : "";
+    const nextAction = isAuditActionAllowed(nextCategory, action, meta) ? action : "";
     setCategory(nextCategory);
     setAction(nextAction);
     setPage(1);
@@ -525,8 +455,8 @@ export default function AdminAuditLogsPage() {
                 <div className="rounded-2xl border border-border/80 bg-secondary/40 p-4">
                   <p className="text-sm font-medium text-foreground">动作摘要</p>
                   <div className="mt-3 space-y-2 text-sm text-muted-foreground">
-                    <p>分类：{AUDIT_CATEGORY_LABELS[getAuditLogCategory(detailLog.action)]}</p>
-                    <p>动作：{AUDIT_ACTION_LABELS[detailLog.action] ?? detailLog.action}</p>
+                    <p>分类：{AUDIT_CATEGORY_LABELS[getAuditLogCategory(detailLog.action, meta)]}</p>
+                    <p>动作：{detailLog.action_label}</p>
                     <p>结果：{detailLog.status}</p>
                     <p>
                       资源：{detailLog.resource_type}

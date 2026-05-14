@@ -1,5 +1,5 @@
 import { apiClient, type ApiResponse } from "./client";
-import type { AdminAuditCategory, AdminAuditLogListData } from "@/types";
+import type { AdminAuditCategory, AdminAuditLogListData, AdminAuditLogMetaData } from "@/types";
 
 export interface AdminAuditLogsParams {
   page?: number;
@@ -33,5 +33,10 @@ export const adminAuditLogsApi = {
       ...response.data.data,
       items: response.data.data.items.map(normalizeAuditLog),
     };
+  },
+
+  meta: async (): Promise<AdminAuditLogMetaData> => {
+    const response = await apiClient.get<ApiResponse<AdminAuditLogMetaData>>("/api/v1/admin-audit-logs/meta");
+    return response.data.data;
   },
 };

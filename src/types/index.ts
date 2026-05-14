@@ -79,7 +79,9 @@ export type AdminAuditCategory =
   | "auth"
   | "user_management"
   | "model_catalog"
-  | "routing_config";
+  | "routing_config"
+  | "voucher"
+  | "pool";
 
 export interface AdminAuditActor {
   uid: string;
@@ -93,6 +95,7 @@ export interface AdminAuditLogItem {
   actor_admin: AdminAuditActor;
   target_admin: AdminAuditActor | null;
   action: string;
+  action_label: string;
   resource_type: string;
   resource_id: string | null;
   status: "success" | "failed";
@@ -109,6 +112,12 @@ export interface AdminAuditLogListData {
   total: number;
   page: number;
   page_size: number;
+}
+
+export interface AdminAuditLogMetaData {
+  categories: string[];
+  action_labels: Record<string, string>;
+  category_actions: Record<string, string[]>;
 }
 
 // ── 通用分页 ──────────────────────────────────────────────
