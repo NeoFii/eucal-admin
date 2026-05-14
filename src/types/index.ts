@@ -593,10 +593,8 @@ export interface UserGrowthPoint {
 export interface DailyUsageTrend {
   date: string;
   request_count: number;
-  pending_count: number;
   success_count: number;
   error_count: number;
-  refunded_count: number;
   aborted_count: number;
   prompt_tokens: number;
   completion_tokens: number;

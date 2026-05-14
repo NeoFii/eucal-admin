@@ -5,14 +5,12 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Activity,
   AlertTriangle,
-  CheckCircle2,
   Eye,
   GitCompareArrows,
   Hash,
   RefreshCw,
   Search,
   Shield,
-  XCircle,
 } from "lucide-react";
 import type { Column } from "@/components/data-table";
 import { DataTable } from "@/components/data-table";
@@ -53,11 +51,14 @@ import {
 } from "./_charts";
 
 const STATUS_LABELS: Record<number, { label: string; cls: string }> = {
-  0: { label: "等待中", cls: "border-gray-200 bg-gray-50 text-gray-700" },
-  1: { label: "成功", cls: "border-green-200 bg-green-50 text-green-700" },
-  2: { label: "失败", cls: "border-red-200 bg-red-50 text-red-700" },
-  3: { label: "已退款", cls: "border-blue-200 bg-blue-50 text-blue-700" },
-  4: { label: "已中断", cls: "border-amber-200 bg-amber-50 text-amber-700" },
+  200: { label: "成功", cls: "border-green-200 bg-green-50 text-green-700" },
+  400: { label: "请求错误", cls: "border-red-200 bg-red-50 text-red-700" },
+  402: { label: "余额不足", cls: "border-red-200 bg-red-50 text-red-700" },
+  428: { label: "配置缺失", cls: "border-red-200 bg-red-50 text-red-700" },
+  429: { label: "限流", cls: "border-amber-200 bg-amber-50 text-amber-700" },
+  499: { label: "客户端断开", cls: "border-amber-200 bg-amber-50 text-amber-700" },
+  502: { label: "上游错误", cls: "border-red-200 bg-red-50 text-red-700" },
+  503: { label: "服务不可用", cls: "border-red-200 bg-red-50 text-red-700" },
 };
 
 const TIER_OPTIONS = [
@@ -71,9 +72,12 @@ const TIER_OPTIONS = [
 
 const STATUS_OPTIONS = [
   { value: "", label: "全部状态" },
-  { value: "1", label: "成功" },
-  { value: "2", label: "失败" },
-  { value: "4", label: "已中断" },
+  { value: "200", label: "成功" },
+  { value: "400", label: "请求错误" },
+  { value: "402", label: "余额不足" },
+  { value: "429", label: "限流" },
+  { value: "499", label: "客户端断开" },
+  { value: "502", label: "上游错误" },
 ];
 
 
@@ -85,7 +89,7 @@ function fmtScore(v: string | number | null | undefined): string {
 }
 
 function fmtMicroYuan(microyuan: number): string {
-  return `¥${(microyuan / 1_000_000).toFixed(4)}`;
+  return `¥${(microyuan / 1_000_000).toFixed(6)}`;
 }
 
 function fmtTokenCount(n: number): string {
@@ -302,17 +306,14 @@ export default function RouteMonitorPage() {
         key: "status",
         header: "状态",
         render: (r) => {
-          const cfg = STATUS_LABELS[r.status] ?? STATUS_LABELS[0];
-          const code = r.status === 1 ? "200" : r.error_code || String(r.status);
-          const shortText = `${code} ${cfg.label}`;
+          const cfg = STATUS_LABELS[r.status] ?? { label: "未知", cls: "border-gray-200 bg-gray-50 text-gray-700" };
+          const text = r.error_code ? `${r.status} ${r.error_code}` : `${r.status} ${cfg.label}`;
           return (
             <span
-              className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-medium ${cfg.cls}`}
+              className={`inline-flex whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-medium ${cfg.cls}`}
               title={r.error_msg || undefined}
             >
-              {r.status === 1 ? <CheckCircle2 className="h-3 w-3" /> : null}
-              {r.status === 2 ? <XCircle className="h-3 w-3" /> : null}
-              {shortText}
+              {text}
             </span>
           );
         },
@@ -637,7 +638,7 @@ export default function RouteMonitorPage() {
                     <p>用户 UID: <span className="font-mono text-foreground">{detail.user_uid ?? "—"}</span></p>
                     <p>Provider: <span className="font-mono text-foreground">{detail.provider_slug ?? "—"}</span></p>
                     <p>Upstream: <span className="font-mono text-foreground">{detail.upstream_model ?? "—"}</span></p>
-                    <p>状态: <span className="font-mono text-foreground">{detail.status === 1 ? "200" : detail.error_code || String(detail.status)} {(STATUS_LABELS[detail.status] ?? STATUS_LABELS[0]).label}</span>{detail.error_msg ? <span className="text-foreground"> — {detail.error_msg}</span> : null}</p>
+                    <p>状态: <span className="font-mono text-foreground">{detail.error_code ? `${detail.status} ${detail.error_code}` : `${detail.status} ${(STATUS_LABELS[detail.status] ?? { label: "未知" }).label}`}</span>{detail.error_msg ? <span className="text-foreground"> — {detail.error_msg}</span> : null}</p>
                     <p>耗时: {detail.duration_ms ?? "—"}ms (↗ 上游 {detail.upstream_latency_ms ?? "—"}ms)</p>
                     <p>Tokens: 输入 {fmtTokenCount(detail.prompt_tokens)} / 输出 {fmtTokenCount(detail.completion_tokens)}{detail.cached_tokens > 0 ? ` / 缓存 ${fmtTokenCount(detail.cached_tokens)}` : ""}</p>
                     <p>费用: {fmtMicroYuan(detail.cost)}</p>

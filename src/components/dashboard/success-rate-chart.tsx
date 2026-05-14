@@ -20,15 +20,13 @@ export function SuccessRateChart({ daily, activeTab }: Props) {
 
     if (activeTab === "rate") {
       const rates = items.map((d) => {
-        const total = d.success_count + d.error_count;
-        return total > 0
-          ? +((d.success_count / total) * 100).toFixed(2)
+        return d.request_count > 0
+          ? +((d.success_count / d.request_count) * 100).toFixed(2)
           : 100;
       });
       const errorRates = items.map((d) => {
-        const total = d.success_count + d.error_count;
-        return total > 0
-          ? +((d.error_count / total) * 100).toFixed(2)
+        return d.request_count > 0
+          ? +((d.error_count / d.request_count) * 100).toFixed(2)
           : 0;
       });
 
