@@ -1,4 +1,5 @@
 import { apiClient, type ApiResponse } from "./client";
+import { mapPoolModelPricesFromApi, mapPoolModelPricesToApi } from "./price-mapping";
 import type {
   PaginatedResponse,
   PoolItem,
@@ -34,7 +35,8 @@ export const poolsApi = {
 
   getDetail: async (slug: string): Promise<PoolDetail> => {
     const response = await apiClient.get<ApiResponse<PoolDetail>>(`${BASE}/${slug}`);
-    return response.data.data;
+    const data = response.data.data;
+    return { ...data, models: data.models.map(mapPoolModelPricesFromApi) };
   },
 
   create: async (data: PoolCreate): Promise<PoolItem> => {
@@ -53,13 +55,13 @@ export const poolsApi = {
   },
 
   addModel: async (slug: string, data: PoolModelCreate): Promise<PoolModelItem> => {
-    const response = await apiClient.post<ApiResponse<PoolModelItem>>(`${BASE}/${slug}/models`, data);
-    return response.data.data;
+    const response = await apiClient.post<ApiResponse<PoolModelItem>>(`${BASE}/${slug}/models`, mapPoolModelPricesToApi(data));
+    return mapPoolModelPricesFromApi(response.data.data);
   },
 
   updateModel: async (slug: string, modelSlug: string, data: PoolModelUpdate): Promise<PoolModelItem> => {
-    const response = await apiClient.patch<ApiResponse<PoolModelItem>>(`${BASE}/${slug}/models/${modelSlug}`, data);
-    return response.data.data;
+    const response = await apiClient.patch<ApiResponse<PoolModelItem>>(`${BASE}/${slug}/models/${modelSlug}`, mapPoolModelPricesToApi(data));
+    return mapPoolModelPricesFromApi(response.data.data);
   },
 
   removeModel: async (slug: string, modelSlug: string): Promise<void> => {

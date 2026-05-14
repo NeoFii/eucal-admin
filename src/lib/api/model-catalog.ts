@@ -1,4 +1,5 @@
 import { apiClient, type ApiResponse } from "./client";
+import { mapModelPricesFromApi, mapModelPricesToApi } from "./price-mapping";
 import type {
   PaginatedResponse,
   ModelVendorItem,
@@ -56,22 +57,23 @@ export const modelCatalogApi = {
     page_size?: number;
   }): Promise<PaginatedResponse<SupportedModelItem>> => {
     const response = await apiClient.get<ApiResponse<PaginatedResponse<SupportedModelItem>>>(`${BASE}/models`, { params });
-    return response.data.data;
+    const data = response.data.data;
+    return { ...data, items: data.items.map(mapModelPricesFromApi) };
   },
 
   getModelDetail: async (slug: string): Promise<SupportedModelDetail> => {
     const response = await apiClient.get<ApiResponse<SupportedModelDetail>>(`/api/v1/models/${slug}`);
-    return response.data.data;
+    return mapModelPricesFromApi(response.data.data);
   },
 
   createModel: async (data: SupportedModelCreate): Promise<SupportedModelDetail> => {
-    const response = await apiClient.post<ApiResponse<SupportedModelDetail>>(`${BASE}/models`, data);
-    return response.data.data;
+    const response = await apiClient.post<ApiResponse<SupportedModelDetail>>(`${BASE}/models`, mapModelPricesToApi(data));
+    return mapModelPricesFromApi(response.data.data);
   },
 
   updateModel: async (slug: string, data: SupportedModelUpdate): Promise<SupportedModelDetail> => {
-    const response = await apiClient.patch<ApiResponse<SupportedModelDetail>>(`${BASE}/models/${slug}`, data);
-    return response.data.data;
+    const response = await apiClient.patch<ApiResponse<SupportedModelDetail>>(`${BASE}/models/${slug}`, mapModelPricesToApi(data));
+    return mapModelPricesFromApi(response.data.data);
   },
 
   /** 归档模型（软删除）：把 is_active 置为 false。可通过 updateModel({ is_active: true }) 恢复。 */
