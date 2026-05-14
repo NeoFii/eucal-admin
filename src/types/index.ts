@@ -785,11 +785,11 @@ export interface RouteCompareData {
   siblings: RouteCompareItem[];
 }
 
-export interface TierBucket {
-  routing_tier: number;
-  count: number;
-  success_count: number;
-  error_count: number;
+export interface TimeBucket {
+  timestamp: number;
+  total: number;
+  success: number;
+  error: number;
 }
 
 export interface ModelBucket {
@@ -816,7 +816,7 @@ export interface RouteAggregateData {
   total: number;
   success_total: number;
   error_total: number;
-  by_tier: TierBucket[];
+  by_time: TimeBucket[];
   by_model: ModelBucket[];
   by_score: ScoreBucket[];
   by_provider_latency: ProviderLatency[];

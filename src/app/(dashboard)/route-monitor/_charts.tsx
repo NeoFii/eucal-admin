@@ -8,25 +8,36 @@ import type {
   ModelBucket,
   ProviderLatency,
   ScoreBucket,
-  TierBucket,
+  TimeBucket,
 } from "@/types";
 
 const ReactECharts = dynamic(() => import("echarts-for-react"), { ssr: false });
 
 
-export function TierDistributionChart({ data }: { data: TierBucket[] }) {
-  const items = useMemo(() => {
-    const byTier = new Map<number, TierBucket>();
-    for (const b of data) byTier.set(b.routing_tier, b);
-    return [1, 2, 3, 4, 5].map((tier) => {
-      const b = byTier.get(tier);
-      return {
-        tier,
-        count: b?.count ?? 0,
-        success: b?.success_count ?? 0,
-        error: b?.error_count ?? 0,
-      };
-    });
+export function SuccessRateChart({ data }: { data: TimeBucket[] }) {
+  const { labels, successRates, errorRates } = useMemo(() => {
+    const ls: string[] = [];
+    const sr: number[] = [];
+    const er: number[] = [];
+    const interval = data.length >= 2 ? data[1].timestamp - data[0].timestamp : 0;
+    for (const b of data) {
+      const d = new Date(b.timestamp * 1000);
+      const hh = String(d.getHours()).padStart(2, "0");
+      const mm = String(d.getMinutes()).padStart(2, "0");
+      const MM = String(d.getMonth() + 1).padStart(2, "0");
+      const dd = String(d.getDate()).padStart(2, "0");
+      if (interval >= 86400) {
+        ls.push(`${MM}-${dd}`);
+      } else if (interval >= 3600) {
+        ls.push(`${MM}-${dd} ${hh}:00`);
+      } else {
+        ls.push(`${hh}:${mm}`);
+      }
+      const total = b.total || 1;
+      sr.push(+((b.success / total) * 100).toFixed(1));
+      er.push(+((b.error / total) * 100).toFixed(1));
+    }
+    return { labels: ls, successRates: sr, errorRates: er };
   }, [data]);
 
   const option = useMemo<EChartsOption>(
@@ -34,43 +45,41 @@ export function TierDistributionChart({ data }: { data: TierBucket[] }) {
       mergeChartOption({
         tooltip: {
           trigger: "axis",
-          axisPointer: { type: "shadow" },
           formatter: (params: unknown) => {
-            const arr = params as Array<{ name: string; value: number; seriesName: string }>;
-            const tierName = arr[0]?.name ?? "";
-            const total = items.find((i) => `Tier ${i.tier}` === tierName)?.count ?? 0;
-            const success = items.find((i) => `Tier ${i.tier}` === tierName)?.success ?? 0;
-            const successRate = total > 0 ? ((success / total) * 100).toFixed(1) : "—";
-            return `<b>${tierName}</b><br/>总计 ${total}<br/>成功率 ${successRate}%<br/>${arr.map((p) => `${p.seriesName}: ${p.value}`).join("<br/>")}`;
+            const arr = params as Array<{ name: string; value: number; seriesName: string; marker: string }>;
+            return `<b>${arr[0]?.name}</b><br/>${arr.map((p) => `${p.marker} ${p.seriesName}: ${p.value}%`).join("<br/>")}`;
           },
         },
-        grid: { top: 16, right: 16, bottom: 24, left: 16, containLabel: true },
-        legend: { show: true, top: "auto", bottom: 0, textStyle: { color: "#6b7280", fontSize: 12 } },
+        grid: { top: 24, right: 16, bottom: 24, left: 16, containLabel: true },
+        legend: { show: true, bottom: 0, textStyle: { color: "#6b7280", fontSize: 12 } },
         xAxis: {
           type: "category",
-          data: items.map((i) => `Tier ${i.tier}`),
+          data: labels,
+          boundaryGap: false,
         },
-        yAxis: { type: "value" },
+        yAxis: { type: "value", max: 100, axisLabel: { formatter: "{value}%" } },
         series: [
           {
-            name: "成功",
-            type: "bar",
-            stack: "total",
-            itemStyle: { color: "#10b981", borderRadius: [0, 0, 0, 0] },
-            data: items.map((i) => i.success),
-            barMaxWidth: 60,
+            name: "成功率",
+            type: "line",
+            smooth: true,
+            symbol: "none",
+            lineStyle: { color: "#10b981", width: 2 },
+            areaStyle: { color: "rgba(16,185,129,0.08)" },
+            data: successRates,
           },
           {
-            name: "失败",
-            type: "bar",
-            stack: "total",
-            itemStyle: { color: "#ef4444", borderRadius: [4, 4, 0, 0] },
-            data: items.map((i) => i.error),
-            barMaxWidth: 60,
+            name: "失败率",
+            type: "line",
+            smooth: true,
+            symbol: "none",
+            lineStyle: { color: "#ef4444", width: 2 },
+            areaStyle: { color: "rgba(239,68,68,0.08)" },
+            data: errorRates,
           },
         ],
       }),
-    [items],
+    [labels, successRates, errorRates],
   );
 
   return <ReactECharts option={option} style={{ height: 280 }} />;

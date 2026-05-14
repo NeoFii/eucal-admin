@@ -47,7 +47,7 @@ import {
   ModelShareChart,
   ProviderLatencyTable,
   ScoreHistogramChart,
-  TierDistributionChart,
+  SuccessRateChart,
 } from "./_charts";
 
 const STATUS_LABELS: Record<number, { label: string; cls: string }> = {
@@ -553,8 +553,8 @@ export default function RouteMonitorPage() {
               <div className="grid gap-3 lg:grid-cols-2">
                 <Card className="panel">
                   <CardContent className="p-4">
-                    <p className="mb-2 text-sm font-medium">Tier 分布与成败</p>
-                    <TierDistributionChart data={aggregates.by_tier} />
+                    <p className="mb-2 text-sm font-medium">成功/失败率趋势</p>
+                    <SuccessRateChart data={aggregates.by_time} />
                   </CardContent>
                 </Card>
                 <Card className="panel">
