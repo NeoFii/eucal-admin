@@ -236,21 +236,21 @@ export default function ModelDetailPage() {
           <ArrowDownToLine className="absolute right-3 top-3 h-8 w-8 text-emerald-200/60" />
           <div className="text-xs font-medium text-emerald-600/80 mb-1">每百万输入价格</div>
           <div className="text-3xl font-bold tabular-nums text-emerald-900">
-            {model.price_input_per_m_fen != null ? formatFenPerMillionTokens(model.price_input_per_m_fen) : "待配置"}
+            {model.input_price_per_million != null ? formatFenPerMillionTokens(model.input_price_per_million) : "待配置"}
           </div>
         </div>
         <div className="stat-gradient-purple relative overflow-hidden rounded-xl p-5">
           <ArrowUpFromLine className="absolute right-3 top-3 h-8 w-8 text-violet-200/60" />
           <div className="text-xs font-medium text-violet-600/80 mb-1">每百万输出价格</div>
           <div className="text-3xl font-bold tabular-nums text-violet-900">
-            {model.price_output_per_m_fen != null ? formatFenPerMillionTokens(model.price_output_per_m_fen) : "待配置"}
+            {model.output_price_per_million != null ? formatFenPerMillionTokens(model.output_price_per_million) : "待配置"}
           </div>
         </div>
         <div className="stat-gradient-cyan relative overflow-hidden rounded-xl p-5">
           <Database className="absolute right-3 top-3 h-8 w-8 text-cyan-200/60" />
           <div className="text-xs font-medium text-cyan-600/80 mb-1">每百万缓存价格</div>
           <div className="text-3xl font-bold tabular-nums text-cyan-900">
-            {model.price_cached_input_per_m_fen != null ? formatFenPerMillionTokens(model.price_cached_input_per_m_fen) : "待配置"}
+            {model.cached_input_price_per_million != null ? formatFenPerMillionTokens(model.cached_input_price_per_million) : "待配置"}
           </div>
         </div>
       </div>

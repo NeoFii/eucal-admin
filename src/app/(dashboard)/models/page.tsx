@@ -389,13 +389,13 @@ export default function ModelsPage() {
                         <div className="rounded-lg bg-gray-50 py-1.5">
                           <div className="text-[10px] uppercase tracking-wider text-muted-foreground">IN / 1M</div>
                           <div className="text-sm font-medium tabular-nums text-foreground">
-                            {model.price_input_per_m_fen != null ? formatYuan(model.price_input_per_m_fen) : "-"}
+                            {model.input_price_per_million != null ? formatYuan(model.input_price_per_million) : "-"}
                           </div>
                         </div>
                         <div className="rounded-lg bg-gray-50 py-1.5">
                           <div className="text-[10px] uppercase tracking-wider text-muted-foreground">OUT / 1M</div>
                           <div className="text-sm font-medium tabular-nums text-foreground">
-                            {model.price_output_per_m_fen != null ? formatYuan(model.price_output_per_m_fen) : "-"}
+                            {model.output_price_per_million != null ? formatYuan(model.output_price_per_million) : "-"}
                           </div>
                         </div>
                       </div>

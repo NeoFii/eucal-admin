@@ -31,8 +31,8 @@ const emptyForm = (vendorSlug: string): SupportedModelCreate => ({
   name: "",
   summary: "",
   description: "",
-  price_input_per_m_fen: undefined,
-  price_output_per_m_fen: undefined,
+  input_price_per_million: undefined,
+  output_price_per_million: undefined,
   capability_tags: [],
   context_window: undefined,
   max_output_tokens: undefined,
@@ -100,8 +100,8 @@ export function ModelFormDialog({
         name: model.name,
         summary: model.summary ?? "",
         description: model.description ?? "",
-        price_input_per_m_fen: model.price_input_per_m_fen ?? undefined,
-        price_output_per_m_fen: model.price_output_per_m_fen ?? undefined,
+        input_price_per_million: model.input_price_per_million ?? undefined,
+        output_price_per_million: model.output_price_per_million ?? undefined,
         capability_tags: model.capability_tags,
         context_window: model.context_window ?? undefined,
         max_output_tokens: model.max_output_tokens ?? undefined,
@@ -111,9 +111,9 @@ export function ModelFormDialog({
         category_keys: model.categories.map((c) => c.key),
       });
       setPriceForm({
-        input: model.price_input_per_m_fen != null ? microYuanToYuan(model.price_input_per_m_fen) : "",
-        output: model.price_output_per_m_fen != null ? microYuanToYuan(model.price_output_per_m_fen) : "",
-        cached: model.price_cached_input_per_m_fen != null ? microYuanToYuan(model.price_cached_input_per_m_fen) : "",
+        input: model.input_price_per_million != null ? microYuanToYuan(model.input_price_per_million) : "",
+        output: model.output_price_per_million != null ? microYuanToYuan(model.output_price_per_million) : "",
+        cached: model.cached_input_price_per_million != null ? microYuanToYuan(model.cached_input_price_per_million) : "",
       });
       setTagsInput(model.capability_tags.join(", "));
       setSelectedCategoryKeys(new Set(model.categories.map((c) => c.key)));
@@ -147,9 +147,9 @@ export function ModelFormDialog({
       name: form.name.trim(),
       summary: form.summary?.trim() || undefined,
       description: form.description?.trim() || undefined,
-      price_input_per_m_fen: priceForm.input ? yuanToMicroYuan(priceForm.input) : undefined,
-      price_output_per_m_fen: priceForm.output ? yuanToMicroYuan(priceForm.output) : undefined,
-      price_cached_input_per_m_fen: priceForm.cached ? yuanToMicroYuan(priceForm.cached) : undefined,
+      input_price_per_million: priceForm.input ? yuanToMicroYuan(priceForm.input) : undefined,
+      output_price_per_million: priceForm.output ? yuanToMicroYuan(priceForm.output) : undefined,
+      cached_input_price_per_million: priceForm.cached ? yuanToMicroYuan(priceForm.cached) : undefined,
       capability_tags: tagsInput
         .split(",")
         .map((tag) => tag.trim())

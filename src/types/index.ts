@@ -191,9 +191,9 @@ export interface SupportedModelItem {
   name: string;
   summary: string | null;
   description: string | null;
-  price_input_per_m_fen: number | null;
-  price_output_per_m_fen: number | null;
-  price_cached_input_per_m_fen: number | null;
+  input_price_per_million: number | null;
+  output_price_per_million: number | null;
+  cached_input_price_per_million: number | null;
   capability_tags: string[];
   context_window: number | null;
   max_output_tokens: number | null;
@@ -213,9 +213,9 @@ export interface SupportedModelCreate {
   vendor_slug: string;
   summary?: string | null;
   description?: string | null;
-  price_input_per_m_fen?: number | null;
-  price_output_per_m_fen?: number | null;
-  price_cached_input_per_m_fen?: number | null;
+  input_price_per_million?: number | null;
+  output_price_per_million?: number | null;
+  cached_input_price_per_million?: number | null;
   capability_tags?: string[];
   context_window?: number | null;
   max_output_tokens?: number | null;
@@ -231,9 +231,9 @@ export interface SupportedModelUpdate {
   vendor_slug?: string;
   summary?: string | null;
   description?: string | null;
-  price_input_per_m_fen?: number | null;
-  price_output_per_m_fen?: number | null;
-  price_cached_input_per_m_fen?: number | null;
+  input_price_per_million?: number | null;
+  output_price_per_million?: number | null;
+  cached_input_price_per_million?: number | null;
   capability_tags?: string[];
   context_window?: number | null;
   max_output_tokens?: number | null;

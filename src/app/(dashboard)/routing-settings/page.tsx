@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { ArrowRight, Gauge, Layers, Settings, Settings2, Shield, Scale } from "lucide-react";
+import { ArrowRight, Layers, Settings, Settings2, Shield, Scale } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { EmptyState } from "@/components/empty-state";
 import { LoadingSpinner } from "@/components/loading-spinner";
@@ -18,16 +18,14 @@ import { useAuthStore } from "@/stores/auth";
 import { getErrorDetail } from "@/lib/errors";
 import type { RoutingSettingItem, AvailableModelSlug } from "@/types";
 
-const SIMPLE_GROUPS = ["general", "weights", "rate_limits"] as const;
+const SIMPLE_GROUPS = ["general", "weights"] as const;
 const GROUP_LABELS: Record<string, string> = {
   general: "通用设置",
   weights: "权重配置",
-  rate_limits: "速率限制",
 };
 const GROUP_ICONS: Record<string, typeof Settings2> = {
   general: Settings2,
   weights: Scale,
-  rate_limits: Gauge,
 };
 
 const TIER_LABELS: Record<string, string> = {
