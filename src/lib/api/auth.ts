@@ -1,4 +1,5 @@
 import { apiClient, type ApiResponse } from "./client";
+import { mapRoleFromApi } from "./role-mapping";
 import type { AdminLoginRequest, AdminUserInfo, ChangePasswordRequest } from "@/types";
 
 // 登录响应数据
@@ -24,6 +25,7 @@ export const authApi = {
       user: {
         ...response.data.data.user,
         uid: String(response.data.data.user.uid),
+        role: mapRoleFromApi(response.data.data.user.role),
       },
     };
   },
@@ -39,6 +41,7 @@ export const authApi = {
     return {
       ...response.data.data,
       uid: String(response.data.data.uid),
+      role: mapRoleFromApi(response.data.data.role),
     };
   },
 

@@ -1,4 +1,5 @@
 import { apiClient, type ApiResponse } from "./client";
+import { mapRoleFromApi } from "./role-mapping";
 import type { AdminAuditCategory, AdminAuditLogListData } from "@/types";
 
 export interface AdminAuditLogsParams {
@@ -10,14 +11,15 @@ export interface AdminAuditLogsParams {
   target_uid?: string;
 }
 
-const normalizeAuditActor = <T extends { uid: string | number }>(actor: T): T => ({
+const normalizeAuditActor = <T extends { uid: string | number; role: number | string }>(actor: T): T => ({
   ...actor,
   uid: String(actor.uid),
+  role: mapRoleFromApi(actor.role as number) as T["role"],
 });
 
 const normalizeAuditLog = <T extends {
-  actor_admin: { uid: string | number };
-  target_admin: { uid: string | number } | null;
+  actor_admin: { uid: string | number; role: number | string };
+  target_admin: { uid: string | number; role: number | string } | null;
 }>(log: T): T => ({
   ...log,
   actor_admin: normalizeAuditActor(log.actor_admin),
