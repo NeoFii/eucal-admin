@@ -37,6 +37,7 @@ import { formatShanghaiDateTime, toShanghaiApiDateTime } from "@/lib/time";
 import { useDateTimeRange } from "@/hooks/use-date-time-range";
 import { DateTimeRangePicker } from "@/components/date-time-range-picker";
 import { useAuthStore } from "@/stores/auth";
+import { getModelPillColor } from "@/lib/model-colors";
 import type {
   RouteAggregateData,
   RouteCompareData,
@@ -52,7 +53,7 @@ import {
 } from "./_charts";
 
 const STATUS_LABELS: Record<number, { label: string; cls: string }> = {
-  0: { label: "Pending", cls: "border-gray-200 bg-gray-50 text-gray-700" },
+  0: { label: "等待中", cls: "border-gray-200 bg-gray-50 text-gray-700" },
   1: { label: "成功", cls: "border-green-200 bg-green-50 text-green-700" },
   2: { label: "失败", cls: "border-red-200 bg-red-50 text-red-700" },
   3: { label: "已退款", cls: "border-blue-200 bg-blue-50 text-blue-700" },
@@ -84,8 +85,11 @@ function fmtScore(v: string | number | null | undefined): string {
 }
 
 function fmtMicroYuan(microyuan: number): string {
-  // 1 元 = 1,000,000 微元；显示到小数点后 4 位的元
   return `¥${(microyuan / 1_000_000).toFixed(4)}`;
+}
+
+function fmtTokenCount(n: number): string {
+  return n.toLocaleString("en-US");
 }
 
 function ScoreBars({ scores }: { scores: Record<string, number> | null | undefined }) {
@@ -265,15 +269,19 @@ export default function RouteMonitorPage() {
       },
       {
         key: "models",
-        header: "请求 / 选中模型",
-        render: (r) => (
-          <div className="flex flex-col gap-0.5">
-            <span className="font-mono text-xs text-muted-foreground">{r.model_name}</span>
-            <span className="font-mono text-sm font-medium">
-              {r.selected_model ?? <span className="text-muted-foreground/60">—</span>}
+        header: "模型",
+        render: (r) => {
+          const model = r.selected_model || (r.model_name !== "auto" ? r.model_name : null);
+          return model ? (
+            <span
+              className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${getModelPillColor(model)}`}
+            >
+              {model}
             </span>
-          </div>
-        ),
+          ) : (
+            <span className="text-xs text-muted-foreground">—</span>
+          );
+        },
       },
       {
         key: "tier",
@@ -295,39 +303,37 @@ export default function RouteMonitorPage() {
         header: "状态",
         render: (r) => {
           const cfg = STATUS_LABELS[r.status] ?? STATUS_LABELS[0];
+          const code = r.status === 1 ? "200" : r.error_code || String(r.status);
+          const shortText = `${code} ${cfg.label}`;
           return (
             <span
               className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-medium ${cfg.cls}`}
+              title={r.error_msg || undefined}
             >
               {r.status === 1 ? <CheckCircle2 className="h-3 w-3" /> : null}
               {r.status === 2 ? <XCircle className="h-3 w-3" /> : null}
-              {cfg.label}
-              {r.error_code ? <span className="text-[10px]">/{r.error_code}</span> : null}
+              {shortText}
             </span>
           );
         },
       },
       {
-        key: "latency",
-        header: "耗时 (ms)",
+        key: "input_tokens",
+        header: "输入",
         render: (r) => (
-          <div className="text-right">
-            <div className="text-sm">{r.duration_ms ?? "—"}</div>
-            {r.upstream_latency_ms != null ? (
-              <div className="text-[10px] text-muted-foreground">↗ {r.upstream_latency_ms}</div>
-            ) : null}
+          <div className="font-mono text-xs leading-relaxed">
+            <div>{fmtTokenCount(r.prompt_tokens)}</div>
+            {r.cached_tokens > 0 && (
+              <div className="text-muted-foreground">缓存: {fmtTokenCount(r.cached_tokens)}</div>
+            )}
           </div>
         ),
       },
       {
-        key: "tokens",
-        header: "Tokens",
+        key: "output_tokens",
+        header: "输出",
         render: (r) => (
-          <div className="font-mono text-xs">
-            {r.prompt_tokens}
-            <span className="text-muted-foreground/50"> / </span>
-            {r.completion_tokens}
-          </div>
+          <span className="font-mono text-xs">{fmtTokenCount(r.completion_tokens)}</span>
         ),
       },
       {
@@ -607,7 +613,11 @@ export default function RouteMonitorPage() {
                   <div className="space-y-1 text-muted-foreground">
                     <p>请求 ID: <span className="font-mono text-foreground">{detail.request_id}</span></p>
                     <p>请求模型: <span className="font-mono text-foreground">{detail.model_name}</span></p>
-                    <p>选中模型: <span className="font-mono text-foreground">{detail.selected_model ?? "—"}</span></p>
+                    <p>选中模型: {detail.selected_model ? (
+                      <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${getModelPillColor(detail.selected_model)}`}>
+                        {detail.selected_model}
+                      </span>
+                    ) : "—"}</p>
                     <p>Tier: T{detail.routing_tier ?? "—"} / 总分 {fmtScore(detail.total_score_0_10)}</p>
                     <p>评分来源: <span className="font-mono">{detail.score_source ?? "—"}</span></p>
                     {detail.input_hash ? (
@@ -627,8 +637,9 @@ export default function RouteMonitorPage() {
                     <p>用户 UID: <span className="font-mono text-foreground">{detail.user_uid ?? "—"}</span></p>
                     <p>Provider: <span className="font-mono text-foreground">{detail.provider_slug ?? "—"}</span></p>
                     <p>Upstream: <span className="font-mono text-foreground">{detail.upstream_model ?? "—"}</span></p>
+                    <p>状态: <span className="font-mono text-foreground">{detail.status === 1 ? "200" : detail.error_code || String(detail.status)} {(STATUS_LABELS[detail.status] ?? STATUS_LABELS[0]).label}</span>{detail.error_msg ? <span className="text-foreground"> — {detail.error_msg}</span> : null}</p>
                     <p>耗时: {detail.duration_ms ?? "—"}ms (↗ 上游 {detail.upstream_latency_ms ?? "—"}ms)</p>
-                    <p>Tokens: {detail.prompt_tokens} / {detail.completion_tokens}</p>
+                    <p>Tokens: 输入 {fmtTokenCount(detail.prompt_tokens)} / 输出 {fmtTokenCount(detail.completion_tokens)}{detail.cached_tokens > 0 ? ` / 缓存 ${fmtTokenCount(detail.cached_tokens)}` : ""}</p>
                     <p>费用: {fmtMicroYuan(detail.cost)}</p>
                     <p>时间: {formatShanghaiDateTime(detail.created_at)}</p>
                   </div>

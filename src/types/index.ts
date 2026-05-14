@@ -725,8 +725,10 @@ export interface RouteRequestListItem {
   is_stream: boolean;
   status: number;
   error_code: string | null;
+  error_msg: string | null;
   prompt_tokens: number;
   completion_tokens: number;
+  cached_tokens: number;
   total_tokens: number;
   cost: number;
   input_hash: string | null;
@@ -736,13 +738,11 @@ export interface RouteRequestListItem {
 
 export interface RouteRequestDetail extends RouteRequestListItem {
   request_preview: RequestPreview | null;
-  error_msg: string | null;
   config_version: number | null;
   config_source: string | null;
   inference_config_version: number | null;
   inference_config_source: string | null;
   router_trace_id: string | null;
-  cached_tokens: number;
   provider_cost: number;
   cost_detail: Record<string, unknown> | null;
   ip: string | null;

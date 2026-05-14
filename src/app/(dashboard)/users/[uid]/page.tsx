@@ -41,6 +41,7 @@ import { userManagementApi } from "@/lib/api/user-management";
 import { getErrorDetail } from "@/lib/errors";
 import { formatShanghaiDateTime } from "@/lib/time";
 import { formatYuan, formatYuanDetail, yuanToMicroYuan } from "@/lib/pricing";
+import { getModelPillColor } from "@/lib/model-colors";
 import { UserBalanceCards } from "@/components/user-detail/user-balance-cards";
 import { UserTokenTrendChart } from "@/components/user-detail/user-token-trend-chart";
 import { UserSpendingChart } from "@/components/user-detail/user-spending-chart";
@@ -56,25 +57,6 @@ const STATUS_CONFIG: Record<number, { label: string; dot: string; bg: string; te
 };
 
 type TabKey = "apikeys" | "usage-logs";
-
-const MODEL_PILL_COLORS = [
-  "bg-blue-50 text-blue-700",
-  "bg-orange-50 text-orange-700",
-  "bg-emerald-50 text-emerald-700",
-  "bg-violet-50 text-violet-700",
-  "bg-red-50 text-red-700",
-  "bg-cyan-50 text-cyan-700",
-  "bg-yellow-50 text-yellow-700",
-  "bg-pink-50 text-pink-700",
-];
-
-function getModelPillColor(model: string): string {
-  let hash = 0;
-  for (let i = 0; i < model.length; i++) {
-    hash = ((hash << 5) - hash + model.charCodeAt(i)) | 0;
-  }
-  return MODEL_PILL_COLORS[Math.abs(hash) % MODEL_PILL_COLORS.length];
-}
 
 const USAGE_STATUS_LABELS: Record<number, { label: string; cls: string }> = {
   0: { label: "待处理", cls: "border-gray-200 bg-gray-50 text-gray-700" },
