@@ -35,9 +35,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
+import { useDateTimeRange } from "@/hooks/use-date-time-range";
+import { DateTimeRangePicker } from "@/components/date-time-range-picker";
 import { userManagementApi } from "@/lib/api/user-management";
 import { getErrorDetail } from "@/lib/errors";
-import { formatShanghaiDateTime, formatShanghaiDateTimeLocalInput } from "@/lib/time";
+import { formatShanghaiDateTime } from "@/lib/time";
 import { formatYuan, formatYuanDetail, yuanToMicroYuan } from "@/lib/pricing";
 import { UserBalanceCards } from "@/components/user-detail/user-balance-cards";
 import { UserTokenTrendChart } from "@/components/user-detail/user-token-trend-chart";
@@ -120,11 +122,7 @@ export default function UserDetailPage() {
   const [rpmValue, setRpmValue] = useState("");
   const [rpmRemark, setRpmRemark] = useState("");
 
-  const [chartStart, setChartStart] = useState(() => {
-    const d = new Date(); d.setHours(0, 0, 0, 0);
-    return formatShanghaiDateTimeLocalInput(d);
-  });
-  const [chartEnd, setChartEnd] = useState(() => formatShanghaiDateTimeLocalInput());
+  const { startTime: chartStart, setStartTime: setChartStart, endTime: chartEnd, setEndTime: setChartEnd } = useDateTimeRange();
   const [chartKeyId, setChartKeyId] = useState<number | undefined>(undefined);
 
   const loadDetail = useCallback(async () => {
@@ -327,18 +325,11 @@ export default function UserDetailPage() {
       {/* ── Charts ── */}
       <div className="space-y-4">
         <div className="flex flex-wrap items-center gap-3 rounded-lg border border-gray-100 bg-white px-4 py-3 shadow-sm">
-          <input
-            type="datetime-local"
-            className="h-8 rounded-md border border-gray-200 px-2 text-sm"
-            value={chartStart}
-            onChange={(e) => setChartStart(e.target.value)}
-          />
-          <span className="text-sm text-muted-foreground">至</span>
-          <input
-            type="datetime-local"
-            className="h-8 rounded-md border border-gray-200 px-2 text-sm"
-            value={chartEnd}
-            onChange={(e) => setChartEnd(e.target.value)}
+          <DateTimeRangePicker
+            startValue={chartStart}
+            endValue={chartEnd}
+            onStartChange={setChartStart}
+            onEndChange={setChartEnd}
           />
           {apiKeys.length > 0 && (
             <select

@@ -627,11 +627,7 @@ export interface RpmTrendData {
   points: RpmTrendPoint[];
 }
 
-export type RpmRangePreset = "1h" | "6h" | "24h" | "7d" | "30d";
-
 // ── 用户用量分析 ──────────────────────────────────────────
-
-export type UsageAnalyticsRange = "8h" | "24h" | "7d" | "30d";
 
 export interface UsageAnalyticsOverview {
   total_requests: number;

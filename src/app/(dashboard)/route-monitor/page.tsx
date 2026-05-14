@@ -33,7 +33,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { routeMonitorApi } from "@/lib/api/route-monitor";
-import { formatShanghaiDateTime } from "@/lib/time";
+import { formatShanghaiDateTime, toShanghaiApiDateTime } from "@/lib/time";
+import { useDateTimeRange } from "@/hooks/use-date-time-range";
+import { DateTimeRangePicker } from "@/components/date-time-range-picker";
 import { useAuthStore } from "@/stores/auth";
 import type {
   RouteAggregateData,
@@ -73,22 +75,6 @@ const STATUS_OPTIONS = [
   { value: "4", label: "已中断" },
 ];
 
-const RANGE_OPTIONS: Array<{ value: "1h" | "24h" | "7d" | "30d"; label: string }> = [
-  { value: "1h", label: "最近 1 小时" },
-  { value: "24h", label: "最近 24 小时" },
-  { value: "7d", label: "最近 7 天" },
-  { value: "30d", label: "最近 30 天" },
-];
-
-function rangeToISO(range: "1h" | "24h" | "7d" | "30d"): { start: string; end: string } {
-  const end = new Date();
-  const start = new Date(end);
-  if (range === "1h") start.setHours(start.getHours() - 1);
-  else if (range === "24h") start.setHours(start.getHours() - 24);
-  else if (range === "7d") start.setDate(start.getDate() - 7);
-  else start.setDate(start.getDate() - 30);
-  return { start: start.toISOString(), end: end.toISOString() };
-}
 
 function fmtScore(v: string | number | null | undefined): string {
   if (v == null) return "—";
@@ -145,7 +131,7 @@ export default function RouteMonitorPage() {
   const [scoreMinInput, setScoreMinInput] = useState("");
   const [scoreMaxInput, setScoreMaxInput] = useState("");
   const [appliedScore, setAppliedScore] = useState<{ min?: number; max?: number }>({});
-  const [listRange, setListRange] = useState<"1h" | "24h" | "7d" | "30d">("24h");
+  const { startTime: listStart, setStartTime: setListStart, endTime: listEnd, setEndTime: setListEnd } = useDateTimeRange();
 
   // detail / compare
   const [detailLoading, setDetailLoading] = useState(false);
@@ -154,25 +140,26 @@ export default function RouteMonitorPage() {
   const [detailOpen, setDetailOpen] = useState(false);
 
   // ── Tab 2: 仪表盘 ─────────────────────────────────────────
-  const [aggRange, setAggRange] = useState<"1h" | "24h" | "7d" | "30d">("24h");
+  const { startTime: aggStart, setStartTime: setAggStart, endTime: aggEnd, setEndTime: setAggEnd } = useDateTimeRange();
   const [aggregates, setAggregates] = useState<RouteAggregateData | null>(null);
   const [aggLoading, setAggLoading] = useState(true);
 
   // ── 拉数据 ───────────────────────────────────────────────
+  const listApiStart = toShanghaiApiDateTime(listStart);
+  const listApiEnd = toShanghaiApiDateTime(listEnd);
+
   const fetchRequests = useCallback(async () => {
     setReqLoading(true);
     try {
-      const { start, end } = rangeToISO(listRange);
       const params: RouteRequestListParams = {
         page: reqPage,
         page_size: pageSize,
-        start,
-        end,
+        start: listApiStart,
+        end: listApiEnd,
       };
       if (tierFilter) params.routing_tier = parseInt(tierFilter, 10);
       if (statusFilter) params.status = parseInt(statusFilter, 10);
       if (appliedSearch) {
-        // 32 字符 hex → 当作 input_hash；长度 > 0 否则作为 request_id 精确匹配
         if (/^[0-9a-f]{32}$/i.test(appliedSearch)) params.input_hash = appliedSearch;
         else params.request_id = appliedSearch;
       }
@@ -188,20 +175,22 @@ export default function RouteMonitorPage() {
     } finally {
       setReqLoading(false);
     }
-  }, [reqPage, pageSize, tierFilter, statusFilter, appliedSearch, appliedScore, listRange]);
+  }, [reqPage, pageSize, tierFilter, statusFilter, appliedSearch, appliedScore, listApiStart, listApiEnd]);
+
+  const aggApiStart = toShanghaiApiDateTime(aggStart);
+  const aggApiEnd = toShanghaiApiDateTime(aggEnd);
 
   const fetchAggregates = useCallback(async () => {
     setAggLoading(true);
     try {
-      const { start, end } = rangeToISO(aggRange);
-      const data = await routeMonitorApi.aggregates({ start, end });
+      const data = await routeMonitorApi.aggregates({ start: aggApiStart, end: aggApiEnd });
       setAggregates(data);
     } catch {
       setAggregates(null);
     } finally {
       setAggLoading(false);
     }
-  }, [aggRange]);
+  }, [aggApiStart, aggApiEnd]);
 
   useEffect(() => {
     if (activeTab === "requests") fetchRequests();
@@ -393,24 +382,12 @@ export default function RouteMonitorPage() {
         <TabsContent value="requests">
           <Card className="panel">
             <CardContent className="space-y-4 p-5">
-              <div className="flex flex-wrap gap-2">
-                {RANGE_OPTIONS.map((o) => (
-                  <button
-                    key={o.value}
-                    onClick={() => {
-                      setListRange(o.value);
-                      setReqPage(1);
-                    }}
-                    className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
-                      listRange === o.value
-                        ? "bg-gray-950 text-white"
-                        : "border border-gray-200 bg-white text-gray-600 hover:bg-gray-100"
-                    }`}
-                  >
-                    {o.label}
-                  </button>
-                ))}
-              </div>
+              <DateTimeRangePicker
+                startValue={listStart}
+                endValue={listEnd}
+                onStartChange={(v) => { setListStart(v); setReqPage(1); }}
+                onEndChange={(v) => { setListEnd(v); setReqPage(1); }}
+              />
 
               <div className="grid gap-4 lg:grid-cols-[1fr_1fr_1fr_1fr_auto] lg:items-end">
                 <div className="space-y-2">
@@ -513,21 +490,12 @@ export default function RouteMonitorPage() {
         <TabsContent value="dashboard">
           <Card className="panel">
             <CardContent className="p-5">
-              <div className="flex flex-wrap gap-2">
-                {RANGE_OPTIONS.map((o) => (
-                  <button
-                    key={o.value}
-                    onClick={() => setAggRange(o.value)}
-                    className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
-                      aggRange === o.value
-                        ? "bg-gray-950 text-white"
-                        : "border border-gray-200 bg-white text-gray-600 hover:bg-gray-100"
-                    }`}
-                  >
-                    {o.label}
-                  </button>
-                ))}
-              </div>
+              <DateTimeRangePicker
+                startValue={aggStart}
+                endValue={aggEnd}
+                onStartChange={setAggStart}
+                onEndChange={setAggEnd}
+              />
             </CardContent>
           </Card>
 

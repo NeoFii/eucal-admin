@@ -25,13 +25,15 @@ import {
   densifyRpmPoints,
 } from "@/components/dashboard/rpm-trend-chart";
 import { toast } from "@/hooks/use-toast";
+import { useDateTimeRange } from "@/hooks/use-date-time-range";
+import { DateTimeRangePicker } from "@/components/date-time-range-picker";
 import { useAuthStore } from "@/stores/auth";
 import { routingSettingsApi } from "@/lib/api/routing-settings";
 import { dashboardApi } from "@/lib/api/dashboard";
+import { toShanghaiApiDateTime } from "@/lib/time";
 import { getErrorDetail } from "@/lib/errors";
 import type {
   RoutingSettingItem,
-  RpmRangePreset,
   RpmTrendData,
 } from "@/types";
 
@@ -57,41 +59,12 @@ function parsePositiveInt(input: string): number | null {
   return parsed;
 }
 
-// Map a preset range to a bucket size that keeps the chart readable
-// (≤ ~170 points). See plan file for the table.
-const RPM_RANGE_OPTIONS: Array<{
-  value: RpmRangePreset;
-  label: string;
-  bucketSeconds: number;
-}> = [
-  { value: "1h", label: "最近 1 小时", bucketSeconds: 60 },
-  { value: "6h", label: "最近 6 小时", bucketSeconds: 3600 },
-  { value: "24h", label: "最近 24 小时", bucketSeconds: 3600 },
-  { value: "7d", label: "最近 7 天", bucketSeconds: 86400 },
-  { value: "30d", label: "最近 30 天", bucketSeconds: 86400 },
-];
-
-function rangeWindow(range: RpmRangePreset): { start: Date; end: Date } {
-  const end = new Date();
-  const start = new Date(end);
-  switch (range) {
-    case "1h":
-      start.setHours(start.getHours() - 1);
-      break;
-    case "6h":
-      start.setHours(start.getHours() - 6);
-      break;
-    case "24h":
-      start.setHours(start.getHours() - 24);
-      break;
-    case "7d":
-      start.setDate(start.getDate() - 7);
-      break;
-    case "30d":
-      start.setDate(start.getDate() - 30);
-      break;
-  }
-  return { start, end };
+function autoBucketSeconds(startIso: string, endIso: string): number {
+  const ms = new Date(endIso).getTime() - new Date(startIso).getTime();
+  const hours = ms / 3_600_000;
+  if (hours <= 2) return 60;
+  if (hours <= 48) return 3600;
+  return 86400;
 }
 
 // ── Page ────────────────────────────────────────────────────────
@@ -177,28 +150,29 @@ export default function RateLimitsPage() {
   };
 
   // ── RPM trend chart ──
-  const [trendRange, setTrendRange] = useState<RpmRangePreset>("24h");
+  const { startTime: trendStart, setStartTime: setTrendStart, endTime: trendEnd, setEndTime: setTrendEnd } = useDateTimeRange();
   const [trend, setTrend] = useState<RpmTrendData | null>(null);
   const [trendLoading, setTrendLoading] = useState(true);
-  // Hold the window we requested so densification matches the y-axis we drew.
   const [trendWindow, setTrendWindow] = useState<{
     start: Date;
     end: Date;
     bucketSeconds: number;
   } | null>(null);
 
-  const loadTrend = useCallback(async (range: RpmRangePreset) => {
+  const trendApiStart = toShanghaiApiDateTime(trendStart);
+  const trendApiEnd = toShanghaiApiDateTime(trendEnd);
+
+  const loadTrend = useCallback(async (startIso: string, endIso: string) => {
     setTrendLoading(true);
-    const opt = RPM_RANGE_OPTIONS.find((o) => o.value === range)!;
-    const { start, end } = rangeWindow(range);
+    const bucketSeconds = autoBucketSeconds(startIso, endIso);
     try {
       const data = await dashboardApi.getRpmTrend({
-        start: start.toISOString(),
-        end: end.toISOString(),
-        bucket_seconds: opt.bucketSeconds,
+        start: startIso,
+        end: endIso,
+        bucket_seconds: bucketSeconds,
       });
       setTrend(data);
-      setTrendWindow({ start, end, bucketSeconds: opt.bucketSeconds });
+      setTrendWindow({ start: new Date(startIso), end: new Date(endIso), bucketSeconds });
     } catch (error) {
       setTrend(null);
       toast.error("加载失败", getErrorDetail(error, "无法读取 RPM 趋势"));
@@ -209,9 +183,9 @@ export default function RateLimitsPage() {
 
   useEffect(() => {
     if (isSuperAdmin) {
-      void loadTrend(trendRange);
+      void loadTrend(trendApiStart, trendApiEnd);
     }
-  }, [isSuperAdmin, trendRange, loadTrend]);
+  }, [isSuperAdmin, trendApiStart, trendApiEnd, loadTrend]);
 
   const densePoints = useMemo(() => {
     if (!trend || !trendWindow) return [];
@@ -407,22 +381,12 @@ export default function RateLimitsPage() {
               · 用于观察峰值与判断扩容窗口
             </span>
           </div>
-          <div className="flex flex-wrap gap-2">
-            {RPM_RANGE_OPTIONS.map((o) => (
-              <button
-                key={o.value}
-                type="button"
-                onClick={() => setTrendRange(o.value)}
-                className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
-                  trendRange === o.value
-                    ? "bg-gray-950 text-white"
-                    : "border border-gray-200 bg-white text-gray-600 hover:bg-gray-100"
-                }`}
-              >
-                {o.label}
-              </button>
-            ))}
-          </div>
+          <DateTimeRangePicker
+            startValue={trendStart}
+            endValue={trendEnd}
+            onStartChange={setTrendStart}
+            onEndChange={setTrendEnd}
+          />
         </CardContent>
       </Card>
 

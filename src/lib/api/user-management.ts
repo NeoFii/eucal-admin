@@ -8,7 +8,6 @@ import type {
   UserUsageLogItem,
   UserUsageStatItem,
   UsageAnalyticsData,
-  UsageAnalyticsRange,
   UpdateUserStatusRequest,
   ResetUserPasswordRequest,
   TopupUserRequest,
@@ -109,7 +108,6 @@ export const userManagementApi = {
   },
 
   getUserUsageAnalytics: async (uid: string, params?: {
-    range?: UsageAnalyticsRange;
     start?: string;
     end?: string;
     api_key_id?: number;

@@ -9,11 +9,10 @@ import { UserGrowthChart } from "@/components/dashboard/user-growth-chart";
 import { ApiCallsChart } from "@/components/dashboard/api-calls-chart";
 import { ApiCostChart } from "@/components/dashboard/api-cost-chart";
 import { SuccessRateChart } from "@/components/dashboard/success-rate-chart";
-import {
-  buildPresetRange,
-  useDashboardData,
-  type DashboardRangePreset,
-} from "@/hooks/use-dashboard-data";
+import { useDashboardData } from "@/hooks/use-dashboard-data";
+import { useDateTimeRange } from "@/hooks/use-date-time-range";
+import { DateTimeRangePicker } from "@/components/date-time-range-picker";
+import { toShanghaiApiDateTime } from "@/lib/time";
 import { formatYuan } from "@/lib/pricing";
 import {
   LayoutDashboard,
@@ -77,70 +76,23 @@ function StatCard({
 }
 
 export default function DashboardPage() {
-  const { summary, userGrowth, usageTrends, range, setRange, loading, error } = useDashboardData();
+  const { startTime, setStartTime, endTime, setEndTime } = useDateTimeRange();
+  const apiStart = toShanghaiApiDateTime(startTime);
+  const apiEnd = toShanghaiApiDateTime(endTime);
+  const { summary, userGrowth, usageTrends, loading, error } = useDashboardData(apiStart, apiEnd);
 
   const [growthTab, setGrowthTab] = useState("new");
   const [callsTab, setCallsTab] = useState("trend");
   const [costTab, setCostTab] = useState("revenue");
   const [rateTab, setRateTab] = useState("trend");
 
-  const handlePreset = (preset: Exclude<DashboardRangePreset, "custom">) => {
-    setRange(buildPresetRange(preset));
-  };
-
-  const handleCustomDate = (which: "start" | "end", value: string) => {
-    if (!value) return;
-    // <input type="date"> 给的是 yyyy-mm-dd，转成当天 00:00 的本地时间再 ISO
-    const dt = new Date(value);
-    if (Number.isNaN(dt.getTime())) return;
-    const next = { ...range, preset: "custom" as const };
-    if (which === "start") next.start = dt.toISOString();
-    else {
-      // end 设为该日 23:59:59.999 让筛选包含当日全部数据
-      dt.setHours(23, 59, 59, 999);
-      next.end = dt.toISOString();
-    }
-    setRange(next);
-  };
-
-  const dateInputValue = (iso: string) => iso.slice(0, 10);
-
   const rangeSelector = (
-    <div className="flex flex-wrap items-center gap-2">
-      <div className="flex rounded-lg border border-border bg-secondary/40 p-0.5 text-xs">
-        {(["7d", "30d", "90d"] as const).map((p) => (
-          <button
-            key={p}
-            type="button"
-            onClick={() => handlePreset(p)}
-            className={`rounded-md px-3 py-1.5 transition-colors ${
-              range.preset === p
-                ? "bg-white text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            近 {p === "7d" ? "7" : p === "30d" ? "30" : "90"} 天
-          </button>
-        ))}
-      </div>
-      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-        <input
-          type="date"
-          value={dateInputValue(range.start)}
-          onChange={(e) => handleCustomDate("start", e.target.value)}
-          max={dateInputValue(range.end)}
-          className="rounded-md border border-border bg-background px-2 py-1.5 text-foreground focus:outline-none focus:ring-1 focus:ring-foreground/30"
-        />
-        <span>—</span>
-        <input
-          type="date"
-          value={dateInputValue(range.end)}
-          onChange={(e) => handleCustomDate("end", e.target.value)}
-          min={dateInputValue(range.start)}
-          className="rounded-md border border-border bg-background px-2 py-1.5 text-foreground focus:outline-none focus:ring-1 focus:ring-foreground/30"
-        />
-      </div>
-    </div>
+    <DateTimeRangePicker
+      startValue={startTime}
+      endValue={endTime}
+      onStartChange={setStartTime}
+      onEndChange={setEndTime}
+    />
   );
 
   if (loading && !summary) {
