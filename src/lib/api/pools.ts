@@ -15,6 +15,7 @@ import type {
   SyncModelsResult,
   CheckBalancesResult,
   AvailableModelSlug,
+  ModelCostInfo,
 } from "@/types";
 
 const BASE = "/api/v1/admin/pools";
@@ -90,6 +91,11 @@ export const poolsApi = {
 
   checkBalances: async (slug: string): Promise<CheckBalancesResult> => {
     const response = await apiClient.post<ApiResponse<CheckBalancesResult>>(`${BASE}/${slug}/accounts/check`);
+    return response.data.data;
+  },
+
+  getModelCost: async (modelSlug: string): Promise<ModelCostInfo> => {
+    const response = await apiClient.get<ApiResponse<ModelCostInfo>>(`${BASE}/model-cost/${modelSlug}`);
     return response.data.data;
   },
 };

@@ -11,7 +11,6 @@ import {
   LayoutDashboard,
   Ticket,
   LogOut,
-  Shield,
   Users,
   Database,
   KeyRound,
@@ -200,8 +199,17 @@ export default function DashboardLayout({
     <div className="relative min-h-screen bg-background">
       <aside className="fixed inset-y-0 left-0 z-40 hidden w-[272px] border-r border-gray-200 bg-white px-4 pb-4 pt-5 lg:flex lg:flex-col">
         <div className="mb-5 flex items-center gap-3 px-4 py-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-950 text-white shadow-[0_12px_24px_-16px_rgba(15,23,42,0.55)]">
-            <Shield className="h-5 w-5" />
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-950 p-2 shadow-[0_12px_24px_-16px_rgba(15,23,42,0.55)]">
+            <svg viewBox="0 0 100 64" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-full w-full">
+              <g fill="white">
+                <rect x="0" y="0" width="16" height="16" rx="8" />
+                <rect x="24" y="0" width="76" height="16" rx="8" />
+                <rect x="0" y="24" width="100" height="16" rx="8" />
+                <rect x="0" y="48" width="16" height="16" rx="8" />
+                <rect x="24" y="48" width="52" height="16" rx="8" />
+                <rect x="84" y="48" width="16" height="16" rx="8" />
+              </g>
+            </svg>
           </div>
           <div>
             <p className="text-sm font-semibold text-foreground">Eucal AI</p>

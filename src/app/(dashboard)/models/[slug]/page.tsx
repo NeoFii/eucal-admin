@@ -7,6 +7,7 @@ import { ModelFormDialog } from "@/components/models/model-form-dialog";
 import { VendorLogo } from "@/components/vendor-logo";
 import { modelCatalogApi } from "@/lib/api/model-catalog";
 import { poolsApi } from "@/lib/api/pools";
+import { routingSettingsApi } from "@/lib/api/routing-settings";
 import type {
   SupportedModelDetail,
   SupportedModelCreate,
@@ -14,6 +15,8 @@ import type {
   ModelCategoryItem,
   ModelVendorItem,
   AvailableModelSlug,
+  RoutingSettingItem,
+  ModelCostInfo,
 } from "@/types";
 import { toast } from "@/hooks/use-toast";
 import { getErrorDetail } from "@/lib/errors";
@@ -29,6 +32,7 @@ import {
   ArchiveRestore,
   RefreshCw,
   Route,
+  TrendingUp,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -53,6 +57,8 @@ export default function ModelDetailPage() {
   const [saving, setSaving] = useState(false);
   const [categories, setCategories] = useState<ModelCategoryItem[]>([]);
   const [availableModels, setAvailableModels] = useState<AvailableModelSlug[]>([]);
+  const [routingTierMap, setRoutingTierMap] = useState<RoutingSettingItem[]>([]);
+  const [costInfo, setCostInfo] = useState<ModelCostInfo | null>(null);
 
   const capabilityTags = mapCapabilityTags(model?.capability_tags);
 
@@ -64,17 +70,43 @@ export default function ModelDetailPage() {
   useEffect(() => {
     const init = async () => {
       setLoading(true);
-      const [, cats, slugs] = await Promise.all([
+      const [, cats, slugs, routingData] = await Promise.all([
         loadModel(),
         modelCatalogApi.getAllCategories(),
         poolsApi.getAvailableModels(),
+        routingSettingsApi.getAll(),
       ]);
       setCategories(cats);
       setAvailableModels(slugs);
+      setRoutingTierMap(routingData.tier_model_map ?? []);
       setLoading(false);
     };
     init();
   }, [loadModel]);
+
+  useEffect(() => {
+    if (!model?.routing_slug) {
+      setCostInfo(null);
+      return;
+    }
+    poolsApi.getModelCost(model.routing_slug).then(setCostInfo).catch(() => setCostInfo(null));
+  }, [model?.routing_slug]);
+
+  const TIER_LABELS: Record<string, string> = {
+    "1": "Tier 1 · 最高难度",
+    "2": "Tier 2 · 较高难度",
+    "3": "Tier 3 · 中等难度",
+    "4": "Tier 4 · 较低难度",
+    "5": "Tier 5 · 最低难度",
+  };
+  const tierUsage = model?.routing_slug
+    ? routingTierMap
+        .filter((item) => item.value === model.routing_slug)
+        .map((item) => {
+          const tierNum = item.key.replace("tier_", "").replace("_model", "");
+          return { tier: tierNum, label: TIER_LABELS[tierNum] ?? `Tier ${tierNum}` };
+        })
+    : [];
 
   const handleArchive = async () => {
     try {
@@ -255,6 +287,80 @@ export default function ModelDetailPage() {
         </div>
       </div>
 
+      {/* 利润率卡片 */}
+      {costInfo && model.input_price_per_million != null && model.output_price_per_million != null && (
+        <div className="panel p-5">
+          <div className="mb-3 flex items-center gap-2 border-b border-gray-100 pb-3">
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            <h3 className="text-sm font-semibold text-foreground">成本与利润率</h3>
+          </div>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            {(() => {
+              const saleIn = model.input_price_per_million;
+              const costIn = costInfo.min_cost_input_per_million;
+              const marginIn = saleIn > 0 ? ((saleIn - costIn) / saleIn * 100) : 0;
+              return (
+                <div className="rounded-lg border border-gray-100 p-4">
+                  <div className="text-xs text-muted-foreground mb-1">输入 Token</div>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-lg font-semibold tabular-nums">{(costIn / 1_000_000).toFixed(2)}</span>
+                    <span className="text-xs text-muted-foreground">→</span>
+                    <span className="text-lg font-semibold tabular-nums">{(saleIn / 1_000_000).toFixed(2)}</span>
+                    <span className="text-xs text-muted-foreground">元/M</span>
+                  </div>
+                  <div className={`mt-1 text-sm font-medium ${marginIn >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+                    利润率 {marginIn.toFixed(1)}%
+                  </div>
+                </div>
+              );
+            })()}
+            {(() => {
+              const saleOut = model.output_price_per_million!;
+              const costOut = costInfo.min_cost_output_per_million;
+              const marginOut = saleOut > 0 ? ((saleOut - costOut) / saleOut * 100) : 0;
+              return (
+                <div className="rounded-lg border border-gray-100 p-4">
+                  <div className="text-xs text-muted-foreground mb-1">输出 Token</div>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-lg font-semibold tabular-nums">{(costOut / 1_000_000).toFixed(2)}</span>
+                    <span className="text-xs text-muted-foreground">→</span>
+                    <span className="text-lg font-semibold tabular-nums">{(saleOut / 1_000_000).toFixed(2)}</span>
+                    <span className="text-xs text-muted-foreground">元/M</span>
+                  </div>
+                  <div className={`mt-1 text-sm font-medium ${marginOut >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+                    利润率 {marginOut.toFixed(1)}%
+                  </div>
+                </div>
+              );
+            })()}
+            {costInfo.min_cost_cached_input_per_million != null && model.cached_input_price_per_million != null && (() => {
+              const saleCached = model.cached_input_price_per_million!;
+              const costCached = costInfo.min_cost_cached_input_per_million!;
+              const marginCached = saleCached > 0 ? ((saleCached - costCached) / saleCached * 100) : 0;
+              return (
+                <div className="rounded-lg border border-gray-100 p-4">
+                  <div className="text-xs text-muted-foreground mb-1">缓存 Token</div>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-lg font-semibold tabular-nums">{(costCached / 1_000_000).toFixed(2)}</span>
+                    <span className="text-xs text-muted-foreground">→</span>
+                    <span className="text-lg font-semibold tabular-nums">{(saleCached / 1_000_000).toFixed(2)}</span>
+                    <span className="text-xs text-muted-foreground">元/M</span>
+                  </div>
+                  <div className={`mt-1 text-sm font-medium ${marginCached >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+                    利润率 {marginCached.toFixed(1)}%
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+          {costInfo.pools.length > 1 && (
+            <p className="mt-2 text-[11px] text-muted-foreground">
+              成本取自 {costInfo.pools.length} 个号池中的最低价（{costInfo.pools.map(p => p.pool_name).join("、")}）
+            </p>
+          )}
+        </div>
+      )}
+
       {/* 额外信息 */}
       {(model.max_output_tokens || model.routing_slug) && (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -276,6 +382,17 @@ export default function ModelDetailPage() {
               </div>
               <div className="rounded-lg bg-gray-800 px-3 py-2">
                 <code className="text-sm font-mono text-emerald-400">{model.routing_slug}</code>
+              </div>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {tierUsage.length > 0 ? (
+                  tierUsage.map((t) => (
+                    <span key={t.tier} className="inline-flex items-center gap-1 rounded-full bg-emerald-900/50 px-2.5 py-0.5 text-[11px] font-medium text-emerald-300">
+                      {t.label}
+                    </span>
+                  ))
+                ) : (
+                  <span className="text-[11px] text-gray-500">未参与路由</span>
+                )}
               </div>
             </div>
           )}

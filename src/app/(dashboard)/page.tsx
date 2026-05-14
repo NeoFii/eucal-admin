@@ -133,6 +133,7 @@ export default function DashboardPage() {
   const s = summary;
   const daily = usageTrends?.daily ?? [];
   const byModel = usageTrends?.by_model ?? [];
+  const bucketSeconds = usageTrends?.bucket_seconds ?? 86400;
   const profitInRange = s ? s.revenue_in_range - s.provider_cost_in_range : 0;
   const profitToday = s ? s.revenue_today - s.provider_cost_today : 0;
 
@@ -212,6 +213,7 @@ export default function DashboardPage() {
             daily={daily}
             byModel={byModel}
             activeTab={callsTab}
+            bucketSeconds={bucketSeconds}
           />
         </ChartCard>
 
@@ -226,7 +228,7 @@ export default function DashboardPage() {
           onTabChange={setCostTab}
           loading={loading}
         >
-          <ApiCostChart daily={daily} activeTab={costTab} />
+          <ApiCostChart daily={daily} activeTab={costTab} bucketSeconds={bucketSeconds} />
         </ChartCard>
 
         <ChartCard
@@ -239,7 +241,7 @@ export default function DashboardPage() {
           onTabChange={setRateTab}
           loading={loading}
         >
-          <SuccessRateChart daily={daily} activeTab={rateTab} />
+          <SuccessRateChart daily={daily} activeTab={rateTab} bucketSeconds={bucketSeconds} />
         </ChartCard>
       </div>
     </div>

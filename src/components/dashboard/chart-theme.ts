@@ -46,3 +46,14 @@ export function mergeChartOption(override: EChartsOption): EChartsOption {
     grid: { ...baseChartOption.grid, ...(override.grid as object) },
   };
 }
+
+const pad = (n: number) => n.toString().padStart(2, "0");
+
+export function formatDateLabel(dateStr: string, bucketSeconds: number): string {
+  if (bucketSeconds >= 86400) return dateStr;
+  const d = new Date(dateStr);
+  if (Number.isNaN(d.getTime())) return dateStr;
+  const HHmm = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  if (bucketSeconds <= 3600) return HHmm;
+  return `${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${HHmm}`;
+}

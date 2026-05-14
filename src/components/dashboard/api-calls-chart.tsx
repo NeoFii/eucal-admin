@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import type { EChartsOption } from "echarts";
 import type { DailyUsageTrend, ModelCallStat } from "@/types";
-import { mergeChartOption, chartColors } from "./chart-theme";
+import { mergeChartOption, chartColors, formatDateLabel } from "./chart-theme";
 import { Button } from "@/components/ui/button";
 import { BarChart3, PieChart } from "lucide-react";
 
@@ -14,9 +14,10 @@ interface Props {
   daily: DailyUsageTrend[];
   byModel: ModelCallStat[];
   activeTab: string;
+  bucketSeconds?: number;
 }
 
-function TrendChart({ daily }: { daily: DailyUsageTrend[] }) {
+function TrendChart({ daily, bucketSeconds = 86400 }: { daily: DailyUsageTrend[]; bucketSeconds?: number }) {
   const items = daily ?? [];
   const option = useMemo<EChartsOption>(
     () =>
@@ -32,7 +33,7 @@ function TrendChart({ daily }: { daily: DailyUsageTrend[] }) {
         },
         xAxis: {
           type: "category",
-          data: items.map((d) => d.date),
+          data: items.map((d) => formatDateLabel(d.date, bucketSeconds)),
           axisLine: { lineStyle: { color: "#e5e7eb" } },
           axisTick: { show: false },
           axisLabel: { color: "#9ca3af", fontSize: 12 },
@@ -65,9 +66,9 @@ function TrendChart({ daily }: { daily: DailyUsageTrend[] }) {
           },
         ],
       }),
-    [items],
+    [items, bucketSeconds],
   );
-  return <ReactECharts option={option} style={{ height: "100%" }} />;
+  return <ReactECharts option={option} style={{ height: "100%" }} notMerge />;
 }
 
 function ModelChart({ byModel }: { byModel: ModelCallStat[] }) {
@@ -168,9 +169,9 @@ function ModelChart({ byModel }: { byModel: ModelCallStat[] }) {
   );
 }
 
-export function ApiCallsChart({ daily, byModel, activeTab }: Props) {
+export function ApiCallsChart({ daily, byModel, activeTab, bucketSeconds }: Props) {
   if (activeTab === "model") {
     return <ModelChart byModel={byModel} />;
   }
-  return <TrendChart daily={daily} />;
+  return <TrendChart daily={daily} bucketSeconds={bucketSeconds} />;
 }

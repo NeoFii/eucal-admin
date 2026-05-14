@@ -219,8 +219,12 @@ export function ModelFormDialog({
             />
             {routingSlugOpen && availableModels.length > 0 && (() => {
               const query = (form.routing_slug ?? "").toLowerCase();
-              const filtered = availableModels.filter((m) =>
-                m.model_slug.toLowerCase().includes(query)
+              const flattened = availableModels.flatMap((m) =>
+                m.pool_names.map((poolName) => ({ model_slug: m.model_slug, pool_name: poolName }))
+              );
+              const filtered = flattened.filter((m) =>
+                m.model_slug.toLowerCase().includes(query) ||
+                m.pool_name.toLowerCase().includes(query)
               );
               if (filtered.length === 0) return null;
               return (
@@ -230,7 +234,7 @@ export function ModelFormDialog({
                 >
                   {filtered.map((m) => (
                     <button
-                      key={m.model_slug}
+                      key={`${m.pool_name}/${m.model_slug}`}
                       type="button"
                       className="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-secondary"
                       onClick={() => {
@@ -239,7 +243,7 @@ export function ModelFormDialog({
                       }}
                     >
                       <span className="font-medium">{m.model_slug}</span>
-                      <span className="ml-2 truncate text-xs text-muted-foreground">{m.pool_names.join(", ")}</span>
+                      <span className="ml-2 shrink-0 rounded bg-gray-100 px-1.5 py-0.5 text-xs text-muted-foreground">{m.pool_name}</span>
                     </button>
                   ))}
                 </div>

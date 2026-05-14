@@ -574,6 +574,23 @@ export interface AvailableModelSlug {
   pool_names: string[];
 }
 
+// ── 号池模型成本（用于利润率展示） ─────────────────────────
+
+export interface ModelCostPoolItem {
+  pool_name: string;
+  cost_input_per_million: number;
+  cost_output_per_million: number;
+  cost_cached_input_per_million: number | null;
+}
+
+export interface ModelCostInfo {
+  model_slug: string;
+  min_cost_input_per_million: number;
+  min_cost_output_per_million: number;
+  min_cost_cached_input_per_million: number | null;
+  pools: ModelCostPoolItem[];
+}
+
 // ── 仪表盘 ──────────────────────────────────────────────
 
 export interface DashboardSummary {
@@ -619,6 +636,7 @@ export interface ModelCallStat {
 }
 
 export interface UsageTrendsData {
+  bucket_seconds: number;
   daily: DailyUsageTrend[];
   by_model: ModelCallStat[];
 }

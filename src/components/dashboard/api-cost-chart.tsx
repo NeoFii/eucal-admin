@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import dynamic from "next/dynamic";
 import type { EChartsOption } from "echarts";
 import type { DailyUsageTrend } from "@/types";
-import { mergeChartOption, chartColors } from "./chart-theme";
+import { mergeChartOption, chartColors, formatDateLabel } from "./chart-theme";
 
 const ReactECharts = dynamic(() => import("echarts-for-react"), { ssr: false });
 
@@ -13,12 +13,13 @@ const MICRO_YUAN = 1_000_000;
 interface Props {
   daily: DailyUsageTrend[];
   activeTab: string;
+  bucketSeconds?: number;
 }
 
-export function ApiCostChart({ daily, activeTab }: Props) {
+export function ApiCostChart({ daily, activeTab, bucketSeconds = 86400 }: Props) {
   const items = daily ?? [];
   const option = useMemo<EChartsOption>(() => {
-    const dates = items.map((d) => d.date);
+    const dates = items.map((d) => formatDateLabel(d.date, bucketSeconds));
 
     let seriesData: number[];
     let seriesName: string;
@@ -90,7 +91,7 @@ export function ApiCostChart({ daily, activeTab }: Props) {
         },
       ],
     });
-  }, [items, activeTab]);
+  }, [items, activeTab, bucketSeconds]);
 
-  return <ReactECharts option={option} style={{ height: "100%" }} />;
+  return <ReactECharts option={option} style={{ height: "100%" }} notMerge />;
 }

@@ -4,19 +4,20 @@ import { useMemo } from "react";
 import dynamic from "next/dynamic";
 import type { EChartsOption } from "echarts";
 import type { DailyUsageTrend } from "@/types";
-import { mergeChartOption, chartColors } from "./chart-theme";
+import { mergeChartOption, chartColors, formatDateLabel } from "./chart-theme";
 
 const ReactECharts = dynamic(() => import("echarts-for-react"), { ssr: false });
 
 interface Props {
   daily: DailyUsageTrend[];
   activeTab: string;
+  bucketSeconds?: number;
 }
 
-export function SuccessRateChart({ daily, activeTab }: Props) {
+export function SuccessRateChart({ daily, activeTab, bucketSeconds = 86400 }: Props) {
   const items = daily ?? [];
   const option = useMemo<EChartsOption>(() => {
-    const dates = items.map((d) => d.date);
+    const dates = items.map((d) => formatDateLabel(d.date, bucketSeconds));
 
     if (activeTab === "rate") {
       const rates = items.map((d) => {
@@ -163,5 +164,5 @@ export function SuccessRateChart({ daily, activeTab }: Props) {
     });
   }, [items, activeTab]);
 
-  return <ReactECharts option={option} style={{ height: "100%" }} />;
+  return <ReactECharts option={option} style={{ height: "100%" }} notMerge />;
 }

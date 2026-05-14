@@ -2,10 +2,12 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   ArrowLeft,
   CircleDollarSign,
   Cpu,
+  ExternalLink,
   Gauge,
   KeyRound,
   Layers,
@@ -34,6 +36,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { poolsApi } from "@/lib/api/pools";
+import { modelCatalogApi } from "@/lib/api/model-catalog";
+import { routingSettingsApi } from "@/lib/api/routing-settings";
 import { getErrorDetail } from "@/lib/errors";
 import { formatShanghaiDateTime } from "@/lib/time";
 import { formatYuan, microYuanToYuan, yuanToMicroYuan } from "@/lib/pricing";
@@ -45,6 +49,8 @@ import type {
   PoolModelUpdate,
   PoolAccountItem,
   PoolModelItem,
+  SupportedModelItem,
+  RoutingSettingItem,
 } from "@/types";
 const STATUS_MAP: Record<string, { label: string; color: string; barColor: string }> = {
   active: { label: "正常", color: "bg-emerald-50 text-emerald-700 border-emerald-200", barColor: "bg-emerald-500" },
@@ -74,6 +80,7 @@ export default function PoolDetailPage() {
   const [modelForm, setModelForm] = useState({ model_slug: "", upstream_model_id: "", input_price: "0", output_price: "0", cached_price: "", context_length: "" });
   const [modelSaving, setModelSaving] = useState(false);
   const [removeModelTarget, setRemoveModelTarget] = useState<PoolModelItem | null>(null);
+  const [removeModelDeps, setRemoveModelDeps] = useState<string[]>([]);
 
   // Automation state
   const [syncing, setSyncing] = useState(false);
@@ -81,6 +88,10 @@ export default function PoolDetailPage() {
 
   // Models list dialog
   const [modelsDialogOpen, setModelsDialogOpen] = useState(false);
+
+  // Cross-reference data
+  const [catalogModels, setCatalogModels] = useState<SupportedModelItem[]>([]);
+  const [routingTierMap, setRoutingTierMap] = useState<RoutingSettingItem[]>([]);
 
   const loadPool = useCallback(async () => {
     setLoading(true);
@@ -94,7 +105,11 @@ export default function PoolDetailPage() {
     }
   }, [slug]);
 
-  useEffect(() => { void loadPool(); }, [loadPool]);
+  useEffect(() => {
+    void loadPool();
+    modelCatalogApi.getAllModels({ status: "active" }).then(setCatalogModels).catch(() => setCatalogModels([]));
+    routingSettingsApi.getAll().then((data) => setRoutingTierMap(data.tier_model_map ?? [])).catch(() => setRoutingTierMap([]));
+  }, [loadPool]);
   // ── Account handlers ──
   const openAddAccount = () => {
     setEditingAccount(null);
@@ -203,6 +218,21 @@ export default function PoolDetailPage() {
       setModelSaving(false);
     }
   };
+  const handleRequestRemoveModel = (m: PoolModelItem) => {
+    const deps: string[] = [];
+    const catalogRef = catalogModels.find((cm) => cm.routing_slug === m.model_slug);
+    if (catalogRef) {
+      deps.push(`目录模型「${catalogRef.name}」引用此模型`);
+    }
+    const tierRefs = routingTierMap.filter((item) => item.value === m.model_slug);
+    for (const tier of tierRefs) {
+      const tierNum = tier.key.replace("tier_", "").replace("_model", "");
+      deps.push(`路由 Tier ${tierNum} 正在使用此模型`);
+    }
+    setRemoveModelDeps(deps);
+    setRemoveModelTarget(m);
+  };
+
   const handleRemoveModel = async () => {
     if (!removeModelTarget) return;
     try {
@@ -509,7 +539,9 @@ export default function PoolDetailPage() {
               <div className="py-12 text-center text-sm text-muted-foreground">暂无模型，点击上方按钮同步或添加</div>
             ) : (
               <div className="space-y-2 pb-2">
-                {pool.models.map((m) => (
+                {pool.models.map((m) => {
+                  const catalogRef = catalogModels.find((cm) => cm.routing_slug === m.model_slug);
+                  return (
                   <div key={m.id} className="flex items-center justify-between rounded-lg border border-gray-200 px-4 py-3 transition-colors hover:bg-gray-50">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
@@ -526,13 +558,22 @@ export default function PoolDetailPage() {
                         {m.cached_input_price_per_million != null && <span>缓存 {(m.cached_input_price_per_million / 1_000_000).toFixed(2)} 元/M</span>}
                         {m.context_length != null && <span>上下文 {m.context_length.toLocaleString()}</span>}
                       </div>
+                      {catalogRef ? (
+                        <Link href={`/models/${catalogRef.slug}`} className="mt-1 inline-flex items-center gap-1 pl-8 text-[11px] text-blue-600 hover:text-blue-800 hover:underline">
+                          <ExternalLink className="h-3 w-3" />
+                          目录：{catalogRef.name}
+                        </Link>
+                      ) : (
+                        <span className="mt-1 block pl-8 text-[11px] text-gray-400">无目录引用</span>
+                      )}
                     </div>
                     <div className="flex shrink-0 gap-1 ml-2">
                       <button type="button" onClick={() => openEditModel(m)} className="rounded p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground"><Pencil className="h-3.5 w-3.5" /></button>
-                      <button type="button" onClick={() => setRemoveModelTarget(m)} className="rounded p-1.5 text-muted-foreground hover:bg-red-50 hover:text-red-500"><Trash2 className="h-3.5 w-3.5" /></button>
+                      <button type="button" onClick={() => handleRequestRemoveModel(m)} className="rounded p-1.5 text-muted-foreground hover:bg-red-50 hover:text-red-500"><Trash2 className="h-3.5 w-3.5" /></button>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -542,7 +583,12 @@ export default function PoolDetailPage() {
       {/* Remove Model Confirm */}
       <ConfirmDialog
         open={!!removeModelTarget} onOpenChange={(v) => !v && setRemoveModelTarget(null)}
-        title="移除模型" description={`确定要从号池中移除模型 "${removeModelTarget?.model_slug}" 吗？`}
+        title="移除模型"
+        description={
+          removeModelDeps.length > 0
+            ? `确定要从号池中移除模型 "${removeModelTarget?.model_slug}" 吗？\n\n⚠️ 依赖警告：\n${removeModelDeps.map(d => `• ${d}`).join("\n")}`
+            : `确定要从号池中移除模型 "${removeModelTarget?.model_slug}" 吗？`
+        }
         confirmLabel="移除" variant="destructive" onConfirm={handleRemoveModel}
       />
     </div>

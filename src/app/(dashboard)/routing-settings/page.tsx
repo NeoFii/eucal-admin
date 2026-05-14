@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { ArrowRight, Layers, Settings, Settings2, Shield, Scale } from "lucide-react";
+import { ArrowRight, ExternalLink, Layers, Settings, Settings2, Shield, Scale, TriangleAlert } from "lucide-react";
+import Link from "next/link";
 import { PageHeader } from "@/components/page-header";
 import { EmptyState } from "@/components/empty-state";
 import { LoadingSpinner } from "@/components/loading-spinner";
@@ -13,10 +14,11 @@ import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { poolsApi } from "@/lib/api/pools";
 import { routingSettingsApi } from "@/lib/api/routing-settings";
+import { modelCatalogApi } from "@/lib/api/model-catalog";
 import { formatShanghaiDateTime } from "@/lib/time";
 import { useAuthStore } from "@/stores/auth";
 import { getErrorDetail } from "@/lib/errors";
-import type { RoutingSettingItem, AvailableModelSlug } from "@/types";
+import type { RoutingSettingItem, AvailableModelSlug, SupportedModelItem } from "@/types";
 
 const SIMPLE_GROUPS = ["general", "weights"] as const;
 const GROUP_LABELS: Record<string, string> = {
@@ -74,6 +76,7 @@ export default function RoutingSettingsPage() {
   const [formState, setFormState] = useState<Record<string, Record<string, string>>>({});
   const [tierRanges, setTierRanges] = useState<Record<number, string>>({});
   const [availableModels, setAvailableModels] = useState<AvailableModelSlug[]>([]);
+  const [catalogModels, setCatalogModels] = useState<SupportedModelItem[]>([]);
   const [saving, setSaving] = useState<Record<string, boolean>>({});
 
   useEffect(() => { setMounted(true); }, []);
@@ -100,6 +103,12 @@ export default function RoutingSettingsPage() {
         setAvailableModels(models);
       } catch {
         setAvailableModels([]);
+      }
+      try {
+        const catalog = await modelCatalogApi.getAllModels({ status: "active" });
+        setCatalogModels(catalog);
+      } catch {
+        setCatalogModels([]);
       }
     } catch (e) {
       toast.error("加载失败", getErrorDetail(e, "无法获取路由设置"));
@@ -316,6 +325,7 @@ export default function RoutingSettingsPage() {
                               value={formState.tier_model_map?.[item.key] ?? ""}
                               onChange={(v) => handleFieldChange("tier_model_map", item.key, v)}
                               availableModels={availableModels}
+                              catalogModels={catalogModels}
                               placeholder="选择或输入模型名称"
                             />
                             {(() => {
@@ -332,6 +342,25 @@ export default function RoutingSettingsPage() {
                               return (
                                 <span className="inline-flex items-center gap-1 text-[11px] text-red-600">
                                   ⚠ 无可用通道，保存将被拒绝
+                                </span>
+                              );
+                            })()}
+                            {(() => {
+                              const currentModel = formState.tier_model_map?.[item.key] ?? "";
+                              if (!currentModel.trim()) return null;
+                              const catalogModel = catalogModels.find((m) => m.routing_slug === currentModel);
+                              if (catalogModel) {
+                                return (
+                                  <Link href={`/models/${catalogModel.slug}`} className="inline-flex items-center gap-1 text-[11px] text-blue-600 hover:text-blue-800 hover:underline">
+                                    <ExternalLink className="h-3 w-3" />
+                                    目录：{catalogModel.name}
+                                  </Link>
+                                );
+                              }
+                              return (
+                                <span className="inline-flex items-center gap-1 text-[11px] text-amber-600">
+                                  <TriangleAlert className="h-3 w-3" />
+                                  未在模型目录中注册
                                 </span>
                               );
                             })()}
