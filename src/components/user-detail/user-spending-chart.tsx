@@ -52,6 +52,7 @@ export function UserSpendingChart({ uid, startTime, endTime, selectedKeyId }: Pr
   const option = useMemo(() => {
     if (!viewModel) return mergeChartOption({});
     return mergeChartOption({
+      grid: { top: 60 },
       tooltip: {
         trigger: "axis",
         formatter: (params: unknown) => {
@@ -100,7 +101,13 @@ export function UserSpendingChart({ uid, startTime, endTime, selectedKeyId }: Pr
 
   return (
     <ChartCard title="费用分布" loading={loading}>
-      <ReactECharts option={option} style={{ height: "100%", width: "100%" }} />
+      {viewModel && !viewModel.hasData ? (
+        <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+          暂无费用数据
+        </div>
+      ) : (
+        <ReactECharts option={option} style={{ height: "100%", width: "100%" }} notMerge />
+      )}
     </ChartCard>
   );
 }

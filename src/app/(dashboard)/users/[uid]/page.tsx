@@ -6,7 +6,6 @@ import {
   ArrowLeft,
   Ban,
   CheckCircle,
-  CreditCard,
   Key,
   KeyRound,
   Mail,
@@ -45,7 +44,6 @@ import { UserTokenTrendChart } from "@/components/user-detail/user-token-trend-c
 import { UserSpendingChart } from "@/components/user-detail/user-spending-chart";
 import type {
   UserDetailData,
-  UserTransactionItem,
   UserApiKeyItem,
   UserUsageLogItem,
 } from "@/types";
@@ -55,11 +53,7 @@ const STATUS_CONFIG: Record<number, { label: string; dot: string; bg: string; te
   1: { label: "正常", dot: "bg-emerald-500", bg: "bg-emerald-50 ring-emerald-200/60", text: "text-emerald-700" },
 };
 
-const TX_TYPE_LABELS: Record<number, string> = {
-  1: "充值", 2: "消费", 3: "退款", 4: "冻结", 5: "解冻", 6: "调账", 7: "代金券",
-};
-
-type TabKey = "transactions" | "apikeys" | "usage-logs";
+type TabKey = "apikeys" | "usage-logs";
 
 const MODEL_PILL_COLORS = [
   "bg-blue-50 text-blue-700",
@@ -103,12 +97,7 @@ export default function UserDetailPage() {
 
   const [detail, setDetail] = useState<UserDetailData | null>(null);
   const [loadingDetail, setLoadingDetail] = useState(true);
-  const [tab, setTab] = useState<TabKey>("transactions");
-
-  const [txList, setTxList] = useState<UserTransactionItem[]>([]);
-  const [txTotal, setTxTotal] = useState(0);
-  const [txPage, setTxPage] = useState(1);
-  const [txLoading, setTxLoading] = useState(false);
+  const [tab, setTab] = useState<TabKey>("usage-logs");
 
   const [apiKeys, setApiKeys] = useState<UserApiKeyItem[]>([]);
   const [keysLoading, setKeysLoading] = useState(false);
@@ -146,14 +135,6 @@ export default function UserDetailPage() {
     finally { setLoadingDetail(false); }
   }, [isValidUid, uid]);
 
-  const loadTransactions = useCallback(async () => {
-    if (!isValidUid) { setTxList([]); setTxTotal(0); setTxLoading(false); return; }
-    setTxLoading(true);
-    try { const d = await userManagementApi.getTransactions(uid, { page: txPage, page_size: 10 }); setTxList(d.items); setTxTotal(d.total); }
-    catch (error) { toast.error("加载交易记录失败", getErrorDetail(error, "请稍后重试")); }
-    finally { setTxLoading(false); }
-  }, [isValidUid, uid, txPage]);
-
   const loadApiKeys = useCallback(async () => {
     if (!isValidUid) { setApiKeys([]); setKeysLoading(false); return; }
     setKeysLoading(true);
@@ -174,7 +155,6 @@ export default function UserDetailPage() {
 
   useEffect(() => { void loadDetail(); }, [loadDetail]);
   useEffect(() => { if (isValidUid) void loadApiKeys(); }, [isValidUid, loadApiKeys]);
-  useEffect(() => { if (isValidUid && tab === "transactions") void loadTransactions(); }, [isValidUid, tab, loadTransactions]);
   useEffect(() => { if (isValidUid && tab === "usage-logs") void loadUsageLogs(); }, [isValidUid, tab, loadUsageLogs]);
 
   /* ── action handlers (unchanged logic) ── */
@@ -192,14 +172,14 @@ export default function UserDetailPage() {
   const handleTopup = async () => {
     const microYuan = yuanToMicroYuan(topupAmount);
     if (!microYuan || microYuan <= 0) { toast.error("金额无效", "请输入正数金额（单位：元）"); return; }
-    try { await userManagementApi.topup(uid, { amount: microYuan, remark: topupRemark || undefined }); toast.success("充值成功", `已充值 ${formatYuan(microYuan)}`); setTopupOpen(false); setTopupAmount(""); setTopupRemark(""); await loadDetail(); if (tab === "transactions") await loadTransactions(); }
+    try { await userManagementApi.topup(uid, { amount: microYuan, remark: topupRemark || undefined }); toast.success("充值成功", `已充值 ${formatYuan(microYuan)}`); setTopupOpen(false); setTopupAmount(""); setTopupRemark(""); await loadDetail(); }
     catch (error) { toast.error("充值失败", getErrorDetail(error, "请稍后重试")); }
   };
   const handleAdjust = async () => {
     const microYuan = yuanToMicroYuan(adjustAmount);
     if (!microYuan) { toast.error("金额无效", "请输入调账金额（单位：元，可为负数）"); return; }
     if (!adjustRemark.trim()) { toast.error("备注必填", "调账操作必须填写备注"); return; }
-    try { await userManagementApi.adjustBalance(uid, { amount: microYuan, remark: adjustRemark }); toast.success("调账成功", `已调整 ${formatYuan(microYuan)}`); setAdjustOpen(false); setAdjustAmount(""); setAdjustRemark(""); await loadDetail(); if (tab === "transactions") await loadTransactions(); }
+    try { await userManagementApi.adjustBalance(uid, { amount: microYuan, remark: adjustRemark }); toast.success("调账成功", `已调整 ${formatYuan(microYuan)}`); setAdjustOpen(false); setAdjustAmount(""); setAdjustRemark(""); await loadDetail(); }
     catch (error) { toast.error("调账失败", getErrorDetail(error, "请稍后重试")); }
   };
   const handleUpdateRpm = async () => {
@@ -235,15 +215,6 @@ export default function UserDetailPage() {
   };
 
   /* ── PLACEHOLDER_COLUMNS ── */
-
-  const txColumns = useMemo<Column<UserTransactionItem>[]>(() => [
-    { key: "id", header: "ID", headerClassName: "px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground/70", className: "px-5 py-3.5 text-sm tabular-nums text-muted-foreground", render: (t) => t.id },
-    { key: "type", header: "类型", headerClassName: "px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground/70", className: "px-5 py-3.5 text-sm", render: (t) => <span className="inline-flex items-center rounded-md bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700">{TX_TYPE_LABELS[t.type] ?? `类型${t.type}`}</span> },
-    { key: "amount", header: "金额", headerClassName: "px-5 py-3.5 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground/70", className: "px-5 py-3.5 text-right text-sm font-medium tabular-nums", render: (t) => <span className={t.amount >= 0 ? "text-emerald-600" : "text-red-500"}>{t.amount >= 0 ? "+" : ""}{formatYuanDetail(t.amount)}</span> },
-    { key: "balance_after", header: "变动后余额", headerClassName: "px-5 py-3.5 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground/70", className: "px-5 py-3.5 text-right text-sm tabular-nums text-muted-foreground", render: (t) => formatYuanDetail(t.balance_after) },
-    { key: "remark", header: "备注", headerClassName: "px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground/70", className: "px-5 py-3.5 text-sm text-muted-foreground", render: (t) => t.remark || "—" },
-    { key: "created_at", header: "时间", headerClassName: "px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground/70", className: "px-5 py-3.5 text-sm tabular-nums text-muted-foreground", render: (t) => formatShanghaiDateTime(t.created_at) },
-  ], []);
 
   const keyColumns = useMemo<Column<UserApiKeyItem>[]>(() => [
     { key: "name", header: "名称", headerClassName: "px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground/70", className: "px-5 py-3.5 text-sm font-medium text-foreground", render: (k) => k.name },
@@ -393,9 +364,6 @@ export default function UserDetailPage() {
         <Tabs value={tab} onValueChange={(v) => setTab(v as TabKey)}>
           <div className="flex items-center justify-between">
             <TabsList>
-              <TabsTrigger value="transactions" className="gap-1.5">
-                <CreditCard className="h-3.5 w-3.5" />交易记录
-              </TabsTrigger>
               <TabsTrigger value="apikeys" className="gap-1.5">
                 <Key className="h-3.5 w-3.5" />API 密钥
               </TabsTrigger>
@@ -407,13 +375,6 @@ export default function UserDetailPage() {
         </Tabs>
 
         <div className="mt-3">
-          {tab === "transactions" && (
-            <Card className="table-shell">
-              <div className="overflow-hidden">
-                <DataTable columns={txColumns} data={txList} loading={txLoading} loadingText="正在加载交易记录..." emptyIcon={CreditCard} emptyTitle="暂无交易记录" emptyDescription="该用户还没有任何交易记录。" rowKey={(t) => t.id} page={txPage} pageSize={10} total={txTotal} onPageChange={setTxPage} showPageInfo />
-              </div>
-            </Card>
-          )}
           {tab === "apikeys" && (
             <Card className="table-shell">
               <div className="overflow-hidden">

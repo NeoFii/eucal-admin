@@ -143,7 +143,7 @@ export function ModelFormDialog({
       ...form,
       vendor_slug: fixedVendor.slug,
       slug: form.slug.trim(),
-      routing_slug: form.routing_slug?.trim() || null,
+      routing_slug: form.routing_slug?.trim() || undefined,
       name: form.name.trim(),
       summary: form.summary?.trim() || undefined,
       description: form.description?.trim() || undefined,

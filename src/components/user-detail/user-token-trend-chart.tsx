@@ -100,7 +100,7 @@ export function UserTokenTrendChart({ uid, startTime, endTime, selectedKeyId }: 
 
   return (
     <ChartCard title="Token 使用趋势" loading={loading}>
-      <ReactECharts option={option} style={{ height: "100%", width: "100%" }} />
+      <ReactECharts option={option} style={{ height: "100%", width: "100%" }} notMerge />
     </ChartCard>
   );
 }
