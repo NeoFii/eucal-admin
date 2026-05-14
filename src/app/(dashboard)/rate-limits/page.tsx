@@ -20,9 +20,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ChartCard } from "@/components/dashboard/chart-card";
 import {
-  RpmBarChart,
-  RpmLineChart,
+  RateTrendChart,
   densifyRpmPoints,
+  densifyTpmPoints,
 } from "@/components/dashboard/rpm-trend-chart";
 import { toast } from "@/hooks/use-toast";
 import { useDateTimeRange } from "@/hooks/use-date-time-range";
@@ -35,6 +35,7 @@ import { getErrorDetail } from "@/lib/errors";
 import type {
   RoutingSettingItem,
   RpmTrendData,
+  TpmTrendData,
 } from "@/types";
 
 // ── Helpers ─────────────────────────────────────────────────────
@@ -149,15 +150,18 @@ export default function RateLimitsPage() {
     }
   };
 
-  // ── RPM trend chart ──
+  // ── RPM & TPM trend charts ──
   const { startTime: trendStart, setStartTime: setTrendStart, endTime: trendEnd, setEndTime: setTrendEnd } = useDateTimeRange();
   const [trend, setTrend] = useState<RpmTrendData | null>(null);
+  const [tpmTrend, setTpmTrend] = useState<TpmTrendData | null>(null);
   const [trendLoading, setTrendLoading] = useState(true);
   const [trendWindow, setTrendWindow] = useState<{
     start: Date;
     end: Date;
     bucketSeconds: number;
   } | null>(null);
+  const [rpmMode, setRpmMode] = useState<"bar" | "line">("bar");
+  const [tpmMode, setTpmMode] = useState<"bar" | "line">("bar");
 
   const trendApiStart = toShanghaiApiDateTime(trendStart);
   const trendApiEnd = toShanghaiApiDateTime(trendEnd);
@@ -166,16 +170,17 @@ export default function RateLimitsPage() {
     setTrendLoading(true);
     const bucketSeconds = autoBucketSeconds(startIso, endIso);
     try {
-      const data = await dashboardApi.getRpmTrend({
-        start: startIso,
-        end: endIso,
-        bucket_seconds: bucketSeconds,
-      });
-      setTrend(data);
+      const [rpmData, tpmData] = await Promise.all([
+        dashboardApi.getRpmTrend({ start: startIso, end: endIso, bucket_seconds: bucketSeconds }),
+        dashboardApi.getTpmTrend({ start: startIso, end: endIso, bucket_seconds: bucketSeconds }),
+      ]);
+      setTrend(rpmData);
+      setTpmTrend(tpmData);
       setTrendWindow({ start: new Date(startIso), end: new Date(endIso), bucketSeconds });
     } catch (error) {
       setTrend(null);
-      toast.error("加载失败", getErrorDetail(error, "无法读取 RPM 趋势"));
+      setTpmTrend(null);
+      toast.error("加载失败", getErrorDetail(error, "无法读取趋势数据"));
     } finally {
       setTrendLoading(false);
     }
@@ -196,6 +201,16 @@ export default function RateLimitsPage() {
       trendWindow.bucketSeconds,
     );
   }, [trend, trendWindow]);
+
+  const denseTpmPoints = useMemo(() => {
+    if (!tpmTrend || !trendWindow) return [];
+    return densifyTpmPoints(
+      tpmTrend.points,
+      trendWindow.start,
+      trendWindow.end,
+      trendWindow.bucketSeconds,
+    );
+  }, [tpmTrend, trendWindow]);
 
   if (!mounted) return null;
   if (!isSuperAdmin) {
@@ -390,18 +405,24 @@ export default function RateLimitsPage() {
         </CardContent>
       </Card>
 
-      {/* ── 双图并排：条形图 + 平滑折线图 ── */}
+      {/* ── 双图并排：RPM + TPM（各自支持条形/折线切换） ── */}
       <div className="grid gap-4 lg:grid-cols-2">
-        <ChartCard title="RPM 条形图" loading={trendLoading}>
-          <RpmBarChart
+        <ChartCard title="RPM 趋势" loading={trendLoading}>
+          <RateTrendChart
+            metric="rpm"
+            mode={rpmMode}
             points={densePoints}
             bucketSeconds={trendWindow?.bucketSeconds ?? 60}
+            onToggleMode={() => setRpmMode((m) => (m === "bar" ? "line" : "bar"))}
           />
         </ChartCard>
-        <ChartCard title="RPM 平滑折线图" loading={trendLoading}>
-          <RpmLineChart
-            points={densePoints}
+        <ChartCard title="TPM 趋势" loading={trendLoading}>
+          <RateTrendChart
+            metric="tpm"
+            mode={tpmMode}
+            points={denseTpmPoints}
             bucketSeconds={trendWindow?.bucketSeconds ?? 60}
+            onToggleMode={() => setTpmMode((m) => (m === "bar" ? "line" : "bar"))}
           />
         </ChartCard>
       </div>

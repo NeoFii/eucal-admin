@@ -3,22 +3,15 @@
 import { useMemo } from "react";
 import dynamic from "next/dynamic";
 import type { EChartsOption } from "echarts";
-import type { RpmTrendPoint } from "@/types";
+import { BarChart3, LineChart } from "lucide-react";
+import type { RpmTrendPoint, TpmTrendPoint } from "@/types";
+import { Button } from "@/components/ui/button";
 import { mergeChartOption, chartColors } from "./chart-theme";
 
 const ReactECharts = dynamic(() => import("echarts-for-react"), { ssr: false });
 
-interface Props {
-  points: RpmTrendPoint[];
-  bucketSeconds: number;
-}
+// ── Densify helpers ─────────────────────────────────────────
 
-/** Fill missing buckets with zeros so the time axis stays continuous.
- *
- *  The backend only returns buckets that have at least one row. For a chart,
- *  gaps need explicit zero samples or the bar/line will skip over quiet
- *  windows and mislead the operator about traffic shape.
- */
 export function densifyRpmPoints(
   points: RpmTrendPoint[],
   start: Date,
@@ -38,15 +31,38 @@ export function densifyRpmPoints(
   for (let t = startMs; t < endMs; t += stepMs) {
     const existing = byKey.get(t);
     out.push(
-      existing ?? {
-        bucket_start: new Date(t).toISOString(),
-        request_count: 0,
-        rpm: 0,
-      },
+      existing ?? { bucket_start: new Date(t).toISOString(), request_count: 0, rpm: 0 },
     );
   }
   return out;
 }
+
+export function densifyTpmPoints(
+  points: TpmTrendPoint[],
+  start: Date,
+  end: Date,
+  bucketSeconds: number,
+): TpmTrendPoint[] {
+  const stepMs = bucketSeconds * 1000;
+  const startMs = Math.floor(start.getTime() / stepMs) * stepMs;
+  const endMs = end.getTime();
+  const byKey = new Map<number, TpmTrendPoint>();
+  for (const p of points) {
+    const t = new Date(p.bucket_start).getTime();
+    if (Number.isNaN(t)) continue;
+    byKey.set(Math.floor(t / stepMs) * stepMs, p);
+  }
+  const out: TpmTrendPoint[] = [];
+  for (let t = startMs; t < endMs; t += stepMs) {
+    const existing = byKey.get(t);
+    out.push(
+      existing ?? { bucket_start: new Date(t).toISOString(), total_tokens: 0, tpm: 0 },
+    );
+  }
+  return out;
+}
+
+// ── Shared utilities ────────────────────────────────────────
 
 function formatBucketLabel(iso: string, bucketSeconds: number): string {
   const d = new Date(iso);
@@ -58,21 +74,9 @@ function formatBucketLabel(iso: string, bucketSeconds: number): string {
   return `${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${HHmm}`;
 }
 
-function buildAxisData(
-  points: RpmTrendPoint[],
-  bucketSeconds: number,
-): { labels: string[]; rpm: number[]; counts: number[]; iso: string[] } {
-  const labels: string[] = [];
-  const rpm: number[] = [];
-  const counts: number[] = [];
-  const iso: string[] = [];
-  for (const p of points) {
-    labels.push(formatBucketLabel(p.bucket_start, bucketSeconds));
-    rpm.push(Number(p.rpm) || 0);
-    counts.push(Number(p.request_count) || 0);
-    iso.push(p.bucket_start);
-  }
-  return { labels, rpm, counts, iso };
+function pickLabelInterval(count: number): number | "auto" {
+  if (count <= 8) return 0;
+  return Math.ceil(count / 8) - 1;
 }
 
 const TOOLTIP_BASE = {
@@ -85,100 +89,120 @@ const TOOLTIP_BASE = {
     "box-shadow: 0 4px 12px rgba(0,0,0,0.08); border-radius: 12px; padding: 10px 14px;",
 };
 
-function makeTooltipFormatter(
-  iso: string[],
-  counts: number[],
-  bucketSeconds: number,
-) {
-  return (params: unknown) => {
-    const arr = Array.isArray(params) ? params : [params];
-    if (arr.length === 0) return "";
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const first = arr[0] as any;
-    const idx = first.dataIndex as number;
-    const ts = iso[idx];
-    const d = new Date(ts);
-    const pad = (n: number) => n.toString().padStart(2, "0");
-    const head = Number.isNaN(d.getTime())
-      ? ts
-      : `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())} ${pad(
-          d.getHours(),
-        )}:${pad(d.getMinutes())}`;
-    const rpmVal = first.value as number;
-    const reqCount = counts[idx] ?? 0;
+// ── Unified RateTrendChart ──────────────────────────────────
+
+interface RateTrendChartProps {
+  metric: "rpm" | "tpm";
+  mode: "bar" | "line";
+  points: RpmTrendPoint[] | TpmTrendPoint[];
+  bucketSeconds: number;
+  onToggleMode: () => void;
+}
+
+export function RateTrendChart({
+  metric,
+  mode,
+  points,
+  bucketSeconds,
+  onToggleMode,
+}: RateTrendChartProps) {
+  const option = useMemo<EChartsOption>(() => {
+    const labels: string[] = [];
+    const values: number[] = [];
+    const iso: string[] = [];
+    const secondary: number[] = [];
+
+    for (const p of points) {
+      labels.push(formatBucketLabel(p.bucket_start, bucketSeconds));
+      iso.push(p.bucket_start);
+      if (metric === "rpm") {
+        const rp = p as RpmTrendPoint;
+        values.push(Number(rp.rpm) || 0);
+        secondary.push(Number(rp.request_count) || 0);
+      } else {
+        const tp = p as TpmTrendPoint;
+        values.push(Number(tp.tpm) || 0);
+        secondary.push(Number(tp.total_tokens) || 0);
+      }
+    }
+
+    const color = metric === "rpm" ? chartColors[1] : chartColors[3] ?? chartColors[0];
     const minutes = bucketSeconds / 60;
-    return `<div style="font-weight:500;margin-bottom:4px;">${head}</div>
-<div>RPM：<b style="color:${chartColors[1]}">${rpmVal.toFixed(2)}</b></div>
-<div style="color:#6b7280;font-size:12px;margin-top:2px;">桶宽 ${minutes} 分钟 · 请求 ${reqCount.toLocaleString()} 次</div>`;
-  };
-}
-
-/** Compute a sane x-axis label interval so the labels don't overlap when there
- *  are many buckets. ECharts accepts `interval: 'auto' | number`. We pick a
- *  number derived from the point count so the label density caps near ~12.
- */
-function pickLabelInterval(count: number): number | "auto" {
-  if (count <= 12) return 0; // show every label
-  return Math.max(0, Math.floor(count / 12) - 1);
-}
-
-export function RpmBarChart({ points, bucketSeconds }: Props) {
-  const option = useMemo<EChartsOption>(() => {
-    const { labels, rpm, counts, iso } = buildAxisData(points, bucketSeconds);
-    return mergeChartOption({
-      tooltip: {
-        ...TOOLTIP_BASE,
-        axisPointer: { type: "shadow" },
-        formatter: makeTooltipFormatter(iso, counts, bucketSeconds),
-      },
-      grid: { top: 30, right: 16, bottom: 30, left: 16, containLabel: true },
-      xAxis: {
-        type: "category",
-        data: labels,
-        axisLine: { lineStyle: { color: "#e5e7eb" } },
-        axisTick: { show: false },
-        axisLabel: {
-          color: "#9ca3af",
-          fontSize: 11,
-          interval: pickLabelInterval(labels.length),
-        },
-      },
-      yAxis: {
-        type: "value",
-        splitLine: { lineStyle: { color: "#f3f4f6" } },
-        axisLabel: { color: "#9ca3af", fontSize: 12 },
-      },
-      series: [
-        {
-          name: "RPM",
-          type: "bar",
-          data: rpm,
-          itemStyle: {
-            color: chartColors[1],
-            borderRadius: [4, 4, 0, 0],
-          },
-          barMaxWidth: 24,
-        },
-      ],
-    });
-  }, [points, bucketSeconds]);
-  return <ReactECharts option={option} style={{ height: "100%" }} notMerge />;
-}
-
-export function RpmLineChart({ points, bucketSeconds }: Props) {
-  const option = useMemo<EChartsOption>(() => {
-    const { labels, rpm, counts, iso } = buildAxisData(points, bucketSeconds);
     const showSymbol = labels.length <= 50;
+
+    const formatter = (params: unknown) => {
+      const arr = Array.isArray(params) ? params : [params];
+      if (arr.length === 0) return "";
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const first = arr[0] as any;
+      const idx = first.dataIndex as number;
+      const ts = iso[idx];
+      const d = new Date(ts);
+      const pad = (n: number) => n.toString().padStart(2, "0");
+      const head = Number.isNaN(d.getTime())
+        ? ts
+        : `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+      const val = first.value as number;
+      const sec = secondary[idx] ?? 0;
+      if (metric === "rpm") {
+        return `<div style="font-weight:500;margin-bottom:4px;">${head}</div>
+<div>RPM：<b style="color:${color}">${val.toFixed(2)}</b></div>
+<div style="color:#6b7280;font-size:12px;margin-top:2px;">桶宽 ${minutes} 分钟 · 请求 ${sec.toLocaleString()} 次</div>`;
+      }
+      return `<div style="font-weight:500;margin-bottom:4px;">${head}</div>
+<div>TPM：<b style="color:${color}">${val.toFixed(2)}</b></div>
+<div style="color:#6b7280;font-size:12px;margin-top:2px;">桶宽 ${minutes} 分钟 · Tokens ${sec.toLocaleString()}</div>`;
+    };
+
+    const series =
+      mode === "bar"
+        ? [
+            {
+              name: metric.toUpperCase(),
+              type: "bar" as const,
+              data: values,
+              itemStyle: { color, borderRadius: [4, 4, 0, 0] },
+              barMaxWidth: 24,
+            },
+          ]
+        : [
+            {
+              name: metric.toUpperCase(),
+              type: "line" as const,
+              data: values,
+              smooth: true,
+              showSymbol,
+              symbol: "circle",
+              symbolSize: 5,
+              itemStyle: { color },
+              lineStyle: { width: 2.5, color },
+              areaStyle: {
+                color: {
+                  type: "linear" as const,
+                  x: 0,
+                  y: 0,
+                  x2: 0,
+                  y2: 1,
+                  colorStops: [
+                    { offset: 0, color: `${color}33` },
+                    { offset: 1, color: "rgba(255,255,255,0)" },
+                  ],
+                },
+              },
+            },
+          ];
+
     return mergeChartOption({
       tooltip: {
         ...TOOLTIP_BASE,
-        formatter: makeTooltipFormatter(iso, counts, bucketSeconds),
+        ...(mode === "bar" ? { axisPointer: { type: "shadow" } } : {}),
+        formatter,
       },
       grid: { top: 30, right: 16, bottom: 30, left: 16, containLabel: true },
       xAxis: {
         type: "category",
-        boundaryGap: false,
         data: labels,
+        boundaryGap: mode === "bar",
         axisLine: { lineStyle: { color: "#e5e7eb" } },
         axisTick: { show: false },
         axisLabel: {
@@ -192,33 +216,59 @@ export function RpmLineChart({ points, bucketSeconds }: Props) {
         splitLine: { lineStyle: { color: "#f3f4f6" } },
         axisLabel: { color: "#9ca3af", fontSize: 12 },
       },
-      series: [
-        {
-          name: "RPM",
-          type: "line",
-          data: rpm,
-          smooth: true,
-          showSymbol,
-          symbol: "circle",
-          symbolSize: 5,
-          itemStyle: { color: chartColors[2] },
-          lineStyle: { width: 2.5, color: chartColors[2] },
-          areaStyle: {
-            color: {
-              type: "linear",
-              x: 0,
-              y: 0,
-              x2: 0,
-              y2: 1,
-              colorStops: [
-                { offset: 0, color: "rgba(139,92,246,0.20)" },
-                { offset: 1, color: "rgba(255,255,255,0)" },
-              ],
-            },
-          },
-        },
-      ],
+      series,
     });
-  }, [points, bucketSeconds]);
-  return <ReactECharts option={option} style={{ height: "100%" }} notMerge />;
+  }, [points, bucketSeconds, metric, mode]);
+
+  return (
+    <div className="relative h-full">
+      <div className="absolute right-0 top-0 z-10">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8"
+          onClick={onToggleMode}
+          title={mode === "bar" ? "切换折线图" : "切换柱状图"}
+        >
+          {mode === "bar" ? (
+            <LineChart className="h-4 w-4" />
+          ) : (
+            <BarChart3 className="h-4 w-4" />
+          )}
+        </Button>
+      </div>
+      <ReactECharts option={option} style={{ height: "100%" }} notMerge />
+    </div>
+  );
+}
+
+// ── Legacy exports (kept for backwards compat if needed elsewhere) ──
+
+interface LegacyProps {
+  points: RpmTrendPoint[];
+  bucketSeconds: number;
+}
+
+export function RpmBarChart({ points, bucketSeconds }: LegacyProps) {
+  return (
+    <RateTrendChart
+      metric="rpm"
+      mode="bar"
+      points={points}
+      bucketSeconds={bucketSeconds}
+      onToggleMode={() => {}}
+    />
+  );
+}
+
+export function RpmLineChart({ points, bucketSeconds }: LegacyProps) {
+  return (
+    <RateTrendChart
+      metric="rpm"
+      mode="line"
+      points={points}
+      bucketSeconds={bucketSeconds}
+      onToggleMode={() => {}}
+    />
+  );
 }

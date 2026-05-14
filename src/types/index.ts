@@ -634,6 +634,17 @@ export interface RpmTrendData {
   points: RpmTrendPoint[];
 }
 
+export interface TpmTrendPoint {
+  bucket_start: string;
+  total_tokens: number;
+  tpm: number;
+}
+
+export interface TpmTrendData {
+  bucket_seconds: number;
+  points: TpmTrendPoint[];
+}
+
 // ── 用户用量分析 ──────────────────────────────────────────
 
 export interface UsageAnalyticsOverview {
