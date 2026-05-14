@@ -199,6 +199,9 @@ export default function ModelsPage() {
         actions={
           <>
             <Button variant="outline" size="sm" asChild>
+              <Link href="/models/categories">分类管理</Link>
+            </Button>
+            <Button variant="outline" size="sm" asChild>
               <Link href="/models/vendors">研发商管理</Link>
             </Button>
             <Button variant="outline" size="sm" onClick={() => void loadAll()} disabled={loading}>
