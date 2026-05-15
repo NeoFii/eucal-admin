@@ -12,6 +12,13 @@ import {
 import { formatYuan } from "@/lib/pricing";
 import type { UserDetailData } from "@/types";
 
+function formatCompactTokens(n: number): string {
+  if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(1)}B`;
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
+  return String(n);
+}
+
 interface Props {
   detail: UserDetailData;
 }
@@ -67,14 +74,14 @@ const CARDS: CardConfig[] = [
     key: "total_tokens",
     label: "总 Token 数",
     icon: Zap,
-    format: (d) => d.total_tokens.toLocaleString(),
+    format: (d) => formatCompactTokens(d.total_tokens),
     accent: "from-emerald-500/10 to-emerald-600/5",
     iconBg: "bg-emerald-500/10 text-emerald-600",
     ring: "ring-emerald-100",
   },
   {
     key: "rpm_effective",
-    label: "RPM 限制",
+    label: "RPM",
     icon: Gauge,
     format: (d) => {
       if (d.rpm_limit != null) return `${d.rpm_limit}`;
@@ -86,9 +93,9 @@ const CARDS: CardConfig[] = [
   },
   {
     key: "current_tpm",
-    label: "实时 TPM",
+    label: "TPM",
     icon: Timer,
-    format: (d) => `${(d.current_tpm ?? 0).toLocaleString()}/min`,
+    format: (d) => `${(d.current_tpm ?? 0).toLocaleString()}`,
     accent: "from-violet-500/10 to-violet-600/5",
     iconBg: "bg-violet-500/10 text-violet-600",
     ring: "ring-violet-100",

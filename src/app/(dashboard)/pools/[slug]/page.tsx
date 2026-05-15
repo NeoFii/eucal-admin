@@ -52,11 +52,11 @@ import type {
   SupportedModelItem,
   RoutingSettingItem,
 } from "@/types";
-const STATUS_MAP: Record<string, { label: string; color: string; barColor: string }> = {
-  active: { label: "正常", color: "bg-emerald-50 text-emerald-700 border-emerald-200", barColor: "bg-emerald-500" },
-  disabled: { label: "禁用", color: "bg-gray-100 text-gray-600 border-gray-200", barColor: "bg-gray-400" },
-  exhausted: { label: "余额耗尽", color: "bg-amber-50 text-amber-700 border-amber-200", barColor: "bg-amber-500" },
-  error: { label: "异常", color: "bg-red-50 text-red-700 border-red-200", barColor: "bg-red-500" },
+const STATUS_MAP: Record<number, { label: string; color: string; barColor: string }> = {
+  0: { label: "正常", color: "bg-emerald-50 text-emerald-700 border-emerald-200", barColor: "bg-emerald-500" },
+  1: { label: "禁用", color: "bg-gray-100 text-gray-600 border-gray-200", barColor: "bg-gray-400" },
+  2: { label: "余额耗尽", color: "bg-amber-50 text-amber-700 border-amber-200", barColor: "bg-amber-500" },
+  3: { label: "异常", color: "bg-red-50 text-red-700 border-red-200", barColor: "bg-red-500" },
 };
 
 export default function PoolDetailPage() {
@@ -73,6 +73,7 @@ export default function PoolDetailPage() {
   const [accountForm, setAccountForm] = useState({ name: "", api_key: "", balance: "0", rpm_limit: "", tpm_limit: "", weight: "1", remark: "" });
   const [accountSaving, setAccountSaving] = useState(false);
   const [disableAccountTarget, setDisableAccountTarget] = useState<PoolAccountItem | null>(null);
+  const [enableAccountTarget, setEnableAccountTarget] = useState<PoolAccountItem | null>(null);
 
   // Model dialogs
   const [modelDialogOpen, setModelDialogOpen] = useState(false);
@@ -165,6 +166,18 @@ export default function PoolDetailPage() {
     try {
       await poolsApi.disableAccount(slug, disableAccountTarget.id);
       toast.success("已禁用", `账号 ${disableAccountTarget.name} 已禁用`);
+      setDisableAccountTarget(null);
+      await loadPool();
+    } catch (e) {
+      toast.error("操作失败", getErrorDetail(e, "请重试"));
+    }
+  };
+  const handleEnableAccount = async () => {
+    if (!enableAccountTarget) return;
+    try {
+      await poolsApi.updateAccount(slug, enableAccountTarget.id, { status: 0 });
+      toast.success("已启用", `账号 ${enableAccountTarget.name} 已启用`);
+      setEnableAccountTarget(null);
       await loadPool();
     } catch (e) {
       toast.error("操作失败", getErrorDetail(e, "请重试"));
@@ -317,14 +330,15 @@ export default function PoolDetailPage() {
           </div>
           <div className="flex items-center gap-4">
             <button type="button" onClick={() => setModelsDialogOpen(true)}
-              className="stat-gradient-blue rounded-2xl px-4 py-3 text-center transition-all hover:shadow-md">
+              className="stat-gradient-blue rounded-2xl px-4 py-3 w-24 text-center transition-all hover:shadow-md">
               <div className="text-xs text-muted-foreground">模型数</div>
               <div className="mt-1 text-2xl font-semibold tabular-nums">{pool.models.length}</div>
               <div className="mt-1 text-[11px] text-blue-600">点击查看</div>
             </button>
-            <div className="stat-gradient-purple rounded-2xl px-4 py-3 text-center">
+            <div className="stat-gradient-purple rounded-2xl px-4 py-3 w-24 text-center">
               <div className="text-xs text-muted-foreground">账号数</div>
               <div className="mt-1 text-2xl font-semibold tabular-nums">{pool.accounts.length}</div>
+              <div className="mt-1 text-[11px] text-transparent">占位</div>
             </div>
             <span className="inline-flex items-center gap-2 whitespace-nowrap rounded-full border px-3 py-1.5 text-sm">
               <span className={`h-2 w-2 rounded-full ${pool.is_enabled ? "bg-emerald-500 animate-pulse-ring" : "bg-gray-400"}`} />
@@ -350,7 +364,7 @@ export default function PoolDetailPage() {
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {pool.accounts.map((a, idx) => {
-              const st = STATUS_MAP[a.status] ?? STATUS_MAP.error;
+              const st = STATUS_MAP[a.status] ?? STATUS_MAP[3];
               return (
                 <Card key={a.id} className="animate-slide-up overflow-hidden transition-all hover:-translate-y-0.5 hover:border-gray-300 hover:shadow-md" style={{ animationDelay: `${idx * 80}ms` }}>
                   <div className={`h-[3px] ${st.barColor}`} />
@@ -364,7 +378,7 @@ export default function PoolDetailPage() {
                         </div>
                       </div>
                       <span className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-2 py-0.5 text-xs font-medium ${st.color}`}>
-                        {a.status === "active" ? <Power className="h-3 w-3" /> : <PowerOff className="h-3 w-3" />}
+                        {a.status === 0 ? <Power className="h-3 w-3" /> : <PowerOff className="h-3 w-3" />}
                         {st.label}
                       </span>
                     </div>
@@ -407,10 +421,17 @@ export default function PoolDetailPage() {
                           className="inline-flex items-center justify-center rounded-md p-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground" title="编辑">
                           <Pencil className="h-4 w-4" />
                         </button>
-                        <button type="button" onClick={() => setDisableAccountTarget(a)}
-                          className="inline-flex items-center justify-center rounded-md p-2 text-muted-foreground transition-colors hover:bg-red-50 hover:text-red-500" title="禁用">
-                          <PowerOff className="h-4 w-4" />
-                        </button>
+                        {a.status === 0 ? (
+                          <button type="button" onClick={(e) => { e.stopPropagation(); setDisableAccountTarget(a); }}
+                            className="inline-flex items-center justify-center rounded-md p-2 text-muted-foreground transition-colors hover:bg-red-50 hover:text-red-500" title="禁用">
+                            <PowerOff className="h-4 w-4" />
+                          </button>
+                        ) : (
+                          <button type="button" onClick={(e) => { e.stopPropagation(); setEnableAccountTarget(a); }}
+                            className="inline-flex items-center justify-center rounded-md p-2 text-muted-foreground transition-colors hover:bg-emerald-50 hover:text-emerald-500" title="启用">
+                            <Power className="h-4 w-4" />
+                          </button>
+                        )}
                       </div>
                     </div>
                   </CardContent>
@@ -514,9 +535,16 @@ export default function PoolDetailPage() {
 
       {/* Disable Account Confirm */}
       <ConfirmDialog
-        open={!!disableAccountTarget} onOpenChange={(v) => !v && setDisableAccountTarget(null)}
+        open={!!disableAccountTarget} onOpenChange={(v) => { if (!v) setDisableAccountTarget(null); }}
         title="禁用账号" description={`确定要禁用账号 "${disableAccountTarget?.name}" 吗？`}
         confirmLabel="禁用" variant="destructive" onConfirm={handleDisableAccount}
+      />
+
+      {/* Enable Account Confirm */}
+      <ConfirmDialog
+        open={!!enableAccountTarget} onOpenChange={(v) => { if (!v) setEnableAccountTarget(null); }}
+        title="启用账号" description={`确定要启用账号 "${enableAccountTarget?.name}" 吗？`}
+        confirmLabel="启用" onConfirm={handleEnableAccount}
       />
 
       {/* Models List Dialog */}

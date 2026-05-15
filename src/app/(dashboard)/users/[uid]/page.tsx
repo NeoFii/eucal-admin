@@ -59,11 +59,14 @@ const STATUS_CONFIG: Record<number, { label: string; dot: string; bg: string; te
 type TabKey = "apikeys" | "usage-logs";
 
 const USAGE_STATUS_LABELS: Record<number, { label: string; cls: string }> = {
-  0: { label: "待处理", cls: "border-gray-200 bg-gray-50 text-gray-700" },
-  1: { label: "成功", cls: "border-green-200 bg-green-50 text-green-700" },
-  2: { label: "错误", cls: "border-red-200 bg-red-50 text-red-700" },
-  3: { label: "已退款", cls: "border-amber-200 bg-amber-50 text-amber-700" },
-  4: { label: "中止", cls: "border-gray-200 bg-gray-50 text-gray-600" },
+  200: { label: "成功", cls: "border-green-200 bg-green-50 text-green-700" },
+  400: { label: "请求错误", cls: "border-red-200 bg-red-50 text-red-700" },
+  402: { label: "余额不足", cls: "border-red-200 bg-red-50 text-red-700" },
+  428: { label: "配置缺失", cls: "border-red-200 bg-red-50 text-red-700" },
+  429: { label: "限流", cls: "border-amber-200 bg-amber-50 text-amber-700" },
+  499: { label: "客户端断开", cls: "border-amber-200 bg-amber-50 text-amber-700" },
+  502: { label: "上游错误", cls: "border-red-200 bg-red-50 text-red-700" },
+  503: { label: "服务不可用", cls: "border-red-200 bg-red-50 text-red-700" },
 };
 
 function formatCompactNumber(n: number): string {
@@ -208,7 +211,14 @@ export default function UserDetailPage() {
 
   const usageColumns = useMemo<Column<UserUsageLogItem>[]>(() => [
     { key: "time", header: "时间", className: "px-4 py-3 text-xs tabular-nums text-muted-foreground whitespace-nowrap", render: (r) => formatShanghaiDateTime(r.created_at) },
-    { key: "status", header: "类型", className: "px-4 py-3", render: (r) => { const cfg = USAGE_STATUS_LABELS[r.status] ?? USAGE_STATUS_LABELS[0]; return <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${cfg.cls}`}>{cfg.label}</span>; } },
+    { key: "status", header: "状态", className: "px-4 py-3", render: (r) => {
+      if (r.status == null) {
+        return <span className="inline-flex whitespace-nowrap items-center rounded-full border border-gray-200 bg-gray-50 px-2.5 py-0.5 text-xs font-medium text-gray-700">处理中</span>;
+      }
+      const cfg = USAGE_STATUS_LABELS[r.status] ?? { label: "未知", cls: "border-gray-200 bg-gray-50 text-gray-700" };
+      const text = r.error_code ? `${r.status} ${r.error_code}` : `${r.status} ${cfg.label}`;
+      return <span className={`inline-flex whitespace-nowrap items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${cfg.cls}`} title={r.error_msg || undefined}>{text}</span>;
+    } },
     { key: "model", header: "模型", className: "px-4 py-3", render: (r) => { const m = r.selected_model || r.model_name; return <span className={`inline-block max-w-[120px] truncate rounded-full px-2.5 py-0.5 text-xs font-medium ${getModelPillColor(m)}`}>{m}</span>; } },
     { key: "key", header: "Key", className: "px-4 py-3", render: (r) => <span className="inline-block max-w-[120px] truncate rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-700">{r.api_key_name || "—"}</span> },
     { key: "input", header: "输入", className: "px-4 py-3", render: (r) => <div><div className="font-mono text-xs">{formatCompactNumber(r.prompt_tokens)}</div>{r.cached_tokens > 0 && <div className="text-[10px] text-muted-foreground">缓存读 {formatCompactNumber(r.cached_tokens)} tokens</div>}</div> },
