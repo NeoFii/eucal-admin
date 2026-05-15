@@ -445,7 +445,7 @@ export interface PoolAccountItem {
   name: string;
   mask: string;
   balance: number;
-  status: string;
+  status: number;
   rpm_limit: number | null;
   tpm_limit: number | null;
   weight: number;
@@ -539,7 +539,7 @@ export interface PoolAccountUpdate {
   name?: string;
   api_key?: string;
   balance?: number;
-  status?: string;
+  status?: number;
   rpm_limit?: number;
   tpm_limit?: number;
   weight?: number;
